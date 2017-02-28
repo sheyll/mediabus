@@ -1,0 +1,15 @@
+*.hi
+*.o
+*.swp
+*.tag
+*~
+*_flymake.hs
+.hsenv/
+.stack-work/
+TAGS
+.idea/
+/.dir-locals.el
+*.refactored.hs
+/*.html
+.vscode/
+/dist/
