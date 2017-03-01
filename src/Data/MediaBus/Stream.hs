@@ -49,7 +49,6 @@ import           GHC.TypeLits
 import           GHC.Generics                ( Generic )
 import           Control.Parallel.Strategies ( NFData, rdeepseq, withStrategy )
 
--- TODO remove Ticks' or create Ticks32/64/...
 data FrameCtx i s t p = MkFrameCtx { _frameCtxSourceId     :: !i
                                    , _frameCtxTimestampRef :: !t
                                    , _frameCtxSeqNumRef    :: !s

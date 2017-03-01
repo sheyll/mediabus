@@ -1,8 +1,11 @@
 module Data.MediaBus.Audio.Alaw
     ( ALaw(..)
+    , alawToS16
+    , s16ToAlaw
     , alawSample
     ) where
 
+import           Data.Conduit
 import           Foreign.Storable
 import           Data.MediaBus.Stream
 import           Data.MediaBus.Audio.Raw
@@ -10,7 +13,6 @@ import           Data.MediaBus.Audio.Channels
 import           Data.MediaBus.BlankMedia
 import           Data.MediaBus.Ticks
 import           Data.MediaBus.Sample
-import           Data.MediaBus.Transcoder
 import           Data.Bits
 import           Data.Word
 import           Data.Int
@@ -38,15 +40,17 @@ instance HasDuration (Proxy ALaw) where
 instance HasChannelLayout ALaw where
     channelLayout _ = SingleChannel
 
-instance Transcoder (SampleBuffer ALaw) (SampleBuffer (S16 8000)) where
-    transcode = over (framePayload . eachSample)
-                     (withStrategy rdeepseq .
-                          MkS16 . decodeALawSample . _alawSample)
+alawToS16 :: Monad m
+          => Conduit (Stream i s t p (SampleBuffer ALaw)) m (Stream i s t p (SampleBuffer (S16 8000)))
+alawToS16 = mapPayloadC' (over eachSample
+                               (withStrategy rdeepseq .
+                                    MkS16 . decodeALawSample . _alawSample))
 
-instance Transcoder (SampleBuffer (S16 8000)) (SampleBuffer ALaw) where
-    transcode = over (framePayload . eachSample)
-                     (withStrategy rdeepseq .
-                          MkALaw . encodeALawSample . _s16Sample)
+s16ToAlaw :: Monad m
+          => Conduit (Stream i s t p (SampleBuffer (S16 8000))) m (Stream i s t p (SampleBuffer ALaw))
+s16ToAlaw = mapPayloadC' (over eachSample
+                               (withStrategy rdeepseq .
+                                    MkALaw . encodeALawSample . _s16Sample))
 
 instance IsAudioSample ALaw where
     type GetAudioSampleRate ALaw = 8000

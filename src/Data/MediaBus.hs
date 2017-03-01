@@ -22,5 +22,4 @@ import           Data.MediaBus.SourceId       as X
 import           Data.MediaBus.Stream         as X
 import           Data.MediaBus.StreamSegment  as X
 import           Data.MediaBus.Ticks          as X
-import           Data.MediaBus.Transcoder     as X
 import           Data.MediaBus.Transport.Udp  as X

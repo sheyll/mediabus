@@ -1,6 +1,7 @@
 module Data.MediaBus.StreamSegment
     ( segmentC
     , segmentC'
+    , forgetSegmentationC
     ) where
 
 import           Conduit
@@ -13,6 +14,7 @@ import           Data.Default
 import           Data.MediaBus.Series
 import           Data.Proxy
 import           GHC.TypeLits
+import           Control.Parallel.Strategies ( NFData )
 
 -- | The packetizer recombines incoming packets into 'Segment's of the given
 -- size. The sequence numbers will be offsetted by the number extra frames
@@ -57,3 +59,7 @@ segmentC' dpx = evalStateC (0, Nothing) $ awaitForever go
                 yieldNextFrame (MkFrame (t + timeOffset) (s + seqNumOffset) p)
     go (MkStream (Start !frmCtx)) =
         yieldStartFrameCtx frmCtx
+
+forgetSegmentationC :: (NFData c, Monad m)
+                    => Conduit (Stream i s t p (Segment d c)) m (Stream i s t p c)
+forgetSegmentationC = mapPayloadC' _segmentContent
