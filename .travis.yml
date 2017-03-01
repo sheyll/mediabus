@@ -6,6 +6,8 @@ cache:
   - $HOME/.stack/
 
 before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libgmp-dev
   - mkdir -p ~/.local/bin
   - export PATH=~/.local/bin:$PATH
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar -xzO --wildcards '*/stack' > ~/.local/bin/stack
