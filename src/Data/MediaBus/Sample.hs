@@ -9,7 +9,6 @@ module Data.MediaBus.Sample
     , sampleVector
     , createSampleBufferFrom
     , HasSampleBuffer(..)
-    , type GetSampleBuffer
     , mutateSamples
     , unsafeMutateSamples
     ) where
@@ -20,6 +19,7 @@ import           Data.Vector.Storable.Mutable    as M
 import           Control.Monad.ST                ( ST, runST )
 import           GHC.Exts                        ( IsList(..) )
 import           Data.Typeable
+import           Data.MediaBus.MediaData
 import           Data.MediaBus.BlankMedia
 import           Data.MediaBus.Segment
 import           Data.MediaBus.Ticks
@@ -29,8 +29,9 @@ import           Data.Default
 import           GHC.Generics                    ( Generic )
 import           Control.DeepSeq
 
--- | A sample is a discrete value of a continuous signal, periodically sampled
--- at the sampling frequency. This is a full buffer of those things.
+-- | Something that 'IsMedia' and also has a static duration.
+-- The static duration means that
+
 newtype SampleBuffer sampleType =
       MkSampleBuffer { _sampleVector :: SV.Vector sampleType }
     deriving (Eq, Monoid, Generic)
@@ -127,8 +128,6 @@ class (SV.Storable (GetSampleType s), SetSampleType s (GetSampleType s) ~ s) =>
                => Traversal s (SetSampleType s t) (GetSampleType s) t
     sampleBuffer :: SV.Storable t
                  => Lens s (SetSampleType s t) (SampleBuffer (GetSampleType s)) (SampleBuffer t)
-
-type GetSampleBuffer s = SampleBuffer (GetSampleType s)
 
 instance SV.Storable a =>
          HasSampleBuffer (SampleBuffer a) where

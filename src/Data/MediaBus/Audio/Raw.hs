@@ -13,6 +13,7 @@ module Data.MediaBus.Audio.Raw
 import           Foreign.Storable
 import           Data.MediaBus.Audio.Channels
 import           Data.MediaBus.BlankMedia
+import           Data.MediaBus.MediaData
 import           Data.Int
 import           Control.Lens
 import           Test.QuickCheck
@@ -24,29 +25,88 @@ import           Data.Function                ( on )
 import           GHC.Generics                 ( Generic )
 import           Control.DeepSeq
 
-newtype S16 (rate :: Nat) = MkS16 { _s16Sample :: Int16 }
-    deriving (Typeable, Storable, Num, Eq, Ord, Arbitrary, Generic)
+-- | Family of audio sample types, indexed by the 'ChannelLayout' because the channel layout
+-- determines the low level repesentation (the 'Storable' instance) of the
+data family Audio (sampleDuration :: StaticTicks) (c :: ChannelLayout) t
 
-instance NFData (S16 rate)
-
-instance KnownNat r =>
-         HasDuration (Proxy (S16 r)) where
-    getDuration _ = 1 / fromInteger (natVal (Proxy :: Proxy r))
-    getDurationTicks _ = convertTicks (MkTicks 1 :: Ticks r Int)
-
-instance Show (S16 r) where
-    show (MkS16 x) = show x
-
-makeLenses ''S16
-
-class (KnownNat (GetAudioSampleRate a), SetAudioSampleRate a (GetAudioSampleRate a) ~ a, Show a, Storable a, Eq a, Ord a, Arbitrary a) =>
+-- | Types that can be used to store audio samples
+class (CanBeBlank a, Storable a, NFData a, Eq a, Num a) =>
       IsAudioSample a where
-    type GetAudioSampleRate a :: Nat
-    type SetAudioSampleRate a (b :: Nat)
     avgSamples :: a -> a -> a
-    setAudioSampleRate :: KnownNat r => proxy r -> a -> SetAudioSampleRate a r
 
-instance KnownNat r =>
+-- | A new type wrapper to indicate that a type is a _raw_ i.e. not encoded or
+-- compressed audio sample in the time domain.
+newtype RawAudio t = MkRawAudio { _rawAudioSample :: t }
+  deriving (Storable, Num, Eq, Ord, Arbitrary, Generic, IsAudioSample)
+
+instance NFData RawAudio
+
+instance CanBeBlank RawAudio where
+    blank = 0
+
+-- | An 'Iso' for the raw audio sample content
+rawAudioSample :: Iso s t (RawAudio s) (RawAudio t)
+rawAudioSample = iso MkRawAudio _rawAudioSample
+
+-- | Newtype wrapper for _mono_ aka 'SingleChannel' audio.
+newtype instance
+        Audio d 'SingleChannel (RawAudio t) = MkSingleChannel{_singleChannelSample
+                                                              ::  RawAudio t}
+                                 deriving (Show, Eq, Ord, NFData, Storable, CanBeBlank, Num,
+                                            Arbitrary)
+
+-- | An 'Iso' for the single channel content
+singleChannelSample :: Iso s t (Audio d 'SingleChannel s) (Audio d 'SingleChannel t)
+singleChannelSample = iso MkSingleChannel _singleChannelSample
+
+-- | Stereo audio samples.
+data instance
+     Audio d 'ChannelPair (RawAudio t) = MkChannelPair{_leftSample :: !t,
+                                                       _rightSample :: !t}
+                            deriving (Show, Eq, Ord, Generic)
+
+-- | A simple lens for the left sample
+leftSample :: Lens' (Audio d 'ChannelPair s) s
+leftSample = lens _leftSample (\p l -> p { _leftSample = l })
+
+-- | A simple lens for the right sample
+rightSample :: Lens' (Audio d 'ChannelPair s) s
+rightSample = lens _rightSample (\p r -> p { _rightSample = r })
+
+instance NFData a =>
+         NFData (Audio d 'ChannelPair  a)
+
+instance Arbitrary a =>
+         Arbitrary (Audio d 'ChannelPair  a) where
+    arbitrary = MkChannelPair <$> arbitrary <*> arbitrary
+
+instance Storable a =>
+         Storable (Audio d 'ChannelPair  a) where
+    sizeOf s = 2 * sizeOf s
+    alignment = alignment
+    peekByteOff ptr off = do
+        l <- peekByteOff ptr off
+        let rOffset = sizeOf l
+        r <- peekByteOff ptr (rOffset + off)
+        return (MkChannelPair l r)
+    pokeByteOff ptr off (MkChannelPair l r) = do
+        pokeByteOff ptr off l
+        let rOffset = sizeOf l
+        pokeByteOff ptr (off + rOffset) r
+
+instance ( Storable (c t)
+         , NFData (c t)
+         , Eq (c t)
+         , CanBeBlank (c t)
+         , HasChannelLayout (c t)
+         , KnownStaticTicks d
+         , IsAudioSample t) =>
+         IsMedia (Audio d c t)
+
+type S16 (rate :: Nat) = Audio (1 :@ rate) SingleChannel RawAudio
+
+
+instance =>
          IsAudioSample (S16 r) where
     type SetAudioSampleRate (S16 r) x = S16 x
     type GetAudioSampleRate (S16 r) = r
@@ -94,6 +154,3 @@ doubleAudioSampleRate :: forall a b.
                       => a
                       -> b
 doubleAudioSampleRate = setAudioSampleRate (Proxy :: Proxy (GetAudioSampleRate a + GetAudioSampleRate a))
-
-instance HasChannelLayout (S16 r) where
-    channelLayout _ = SingleChannel
