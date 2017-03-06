@@ -1,4 +1,4 @@
-module Data.MediaBus.Ticks
+module Data.MediaBus.Basics.Ticks
   ( Rate(..)
   , type Hz
   , type OnePerPicoSecond
@@ -53,8 +53,8 @@ import Control.DeepSeq
 import Control.Lens
 import Data.Default
 import Data.Kind
-import Data.MediaBus.Monotone
-import Data.MediaBus.Series
+import Data.MediaBus.Basics.Monotone
+import Data.MediaBus.Basics.Series
 import Data.Proxy
 import Data.Time.Clock
 import Data.Word

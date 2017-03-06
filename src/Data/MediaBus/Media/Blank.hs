@@ -3,7 +3,7 @@ module Data.MediaBus.Media.Blank
     , CanBeBlank(..)
     ) where
 
-import           Data.MediaBus.Ticks
+import           Data.MediaBus.Basics.Ticks
 import           Data.MediaBus.Media.Segment
 import           Data.Time.Clock
 import           Control.Lens

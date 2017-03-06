@@ -1,4 +1,4 @@
-module Data.MediaBus.TicksSpec
+module Data.MediaBus.Basics.TicksSpec
   ( spec
   ) where
 

@@ -5,9 +5,9 @@ module Data.MediaBus.Reorder
     ) where
 
 import           Data.MediaBus.Stream
-import           Data.MediaBus.Sequence
-import           Data.MediaBus.OrderedBy
-import           Data.MediaBus.Series
+import           Data.MediaBus.Basics.Sequence
+import           Data.MediaBus.Basics.OrderedBy
+import           Data.MediaBus.Basics.Series
 import qualified Data.Set                         as Set
 import           Conduit
 import           Control.Lens

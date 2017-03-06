@@ -1,4 +1,4 @@
-module Data.MediaBus.SourceId
+module Data.MediaBus.Basics.SourceId
     ( SourceId(..)
     , sourceIdValue
     , type SrcId32

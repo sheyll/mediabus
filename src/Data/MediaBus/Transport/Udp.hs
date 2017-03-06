@@ -5,10 +5,10 @@ import           Control.Monad.State.Strict
 import           Control.Monad.Trans.Resource
 import           Conduit
 import           Data.Conduit.Network.UDP
-import           Data.MediaBus.Clock
+import           Data.MediaBus.Basics.Clock
 import           Data.MediaBus.Stream
-import           Data.MediaBus.SourceId
-import           Data.MediaBus.Sequence
+import           Data.MediaBus.Basics.SourceId
+import           Data.MediaBus.Basics.Sequence
 import           Data.Streaming.Network
 import           Network.Socket               ( SockAddr, close )
 import qualified Data.ByteString              as B

@@ -8,7 +8,7 @@ module Data.MediaBus.Media.Segment
     , CanSegment(..)
     ) where
 
-import           Data.MediaBus.Ticks
+import           Data.MediaBus.Basics.Ticks
 import           Data.MediaBus.Media
 import           Data.MediaBus.Media.Channels
 import           Data.MediaBus.Media.Samples

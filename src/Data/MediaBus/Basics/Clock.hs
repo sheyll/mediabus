@@ -1,4 +1,4 @@
-module Data.MediaBus.Clock
+module Data.MediaBus.Basics.Clock
     ( IsClock(..)
     , timeSince
     , UtcClock(..)
@@ -13,7 +13,7 @@ import           Control.Lens
 import           Data.Default
 import           Data.Function                   ( on )
 import           Data.Kind
-import           Data.MediaBus.Monotone
+import           Data.MediaBus.Basics.Monotone
 import           Data.Proxy
 import           Data.Time.Calendar
 import           Data.Time.Clock

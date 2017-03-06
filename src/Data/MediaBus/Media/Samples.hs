@@ -21,7 +21,7 @@ module Data.MediaBus.Media.Samples
 import Control.DeepSeq
 import Control.Lens
 import Data.MediaBus.Media
-import Data.MediaBus.Ticks
+import Data.MediaBus.Basics.Ticks
 import Data.Typeable
 import Foreign.Storable
 

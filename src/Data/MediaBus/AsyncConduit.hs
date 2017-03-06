@@ -15,10 +15,10 @@ import Control.Lens
 import Control.Monad.State
 import Control.Parallel.Strategies (NFData, rdeepseq, withStrategy)
 import Data.Default
-import Data.MediaBus.Clock
-import Data.MediaBus.Discontinous
+import Data.MediaBus.Basics.Clock
+import Data.MediaBus.Media.Discontinous
 import Data.MediaBus.Stream
-import Data.MediaBus.Ticks
+import Data.MediaBus.Basics.Ticks
 import Data.Proxy
 import Data.Time.Clock
 import Debug.Trace

@@ -12,7 +12,7 @@ import Data.MediaBus.Media.Audio.Raw
 import Data.MediaBus.Media.Buffer
 import Data.MediaBus.Media.Samples
 import Data.MediaBus.Stream
-import Data.MediaBus.Ticks
+import Data.MediaBus.Basics.Ticks
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.Mutable as M
 import GHC.Stack

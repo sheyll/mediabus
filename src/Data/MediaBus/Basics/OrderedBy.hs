@@ -1,4 +1,4 @@
-module Data.MediaBus.OrderedBy ( OrderedBy(..) ) where
+module Data.MediaBus.Basics.OrderedBy ( OrderedBy(..) ) where
 
 import Data.Function (on)
 

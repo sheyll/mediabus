@@ -1,4 +1,4 @@
-module Data.MediaBus.Discontinous
+module Data.MediaBus.Media.Discontinous
   ( Discontinous(..)
   , _Missing
   , _Got
@@ -13,7 +13,7 @@ import Data.MediaBus.Media
 import Data.MediaBus.Media.Channels
 import Data.MediaBus.Media.Samples
 import Data.MediaBus.Stream
-import Data.MediaBus.Ticks
+import Data.MediaBus.Basics.Ticks
 import GHC.Generics (Generic)
 
 --  TODO create a gap detection mechanism, a simple stateful conduit that knows the next timestamp

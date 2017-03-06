@@ -37,11 +37,11 @@ module Data.MediaBus.Stream
 import           Conduit
 import           Control.Monad
 import           Control.Lens
-import           Data.MediaBus.Sequence
+import           Data.MediaBus.Basics.Sequence
 import           Data.MediaBus.Media
 import           Data.MediaBus.Media.Channels
-import           Data.MediaBus.Ticks
-import           Data.MediaBus.Series
+import           Data.MediaBus.Basics.Ticks
+import           Data.MediaBus.Basics.Series
 import           Control.Monad.Writer.Strict ( tell )
 import           Control.Monad.State.Strict
 import           Data.Maybe

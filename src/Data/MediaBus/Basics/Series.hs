@@ -1,4 +1,4 @@
-module Data.MediaBus.Series
+module Data.MediaBus.Basics.Series
   ( Series(..)
   , type Series'
   , _Next

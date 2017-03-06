@@ -6,7 +6,7 @@ import           Data.MediaBus.Media.Audio.Raw
 import           Data.MediaBus.Media.Audio
 import           Data.MediaBus.Media.Channels
 import           Data.MediaBus.Media.Buffer
-import           Data.MediaBus.Ticks
+import           Data.MediaBus.Basics.Ticks
 import           Data.MediaBus.Stream
 import           System.IO               ( Handle, hClose )
 import           System.Process          ( shell )

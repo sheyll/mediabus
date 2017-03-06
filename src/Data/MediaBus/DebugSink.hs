@@ -13,7 +13,7 @@ import Data.MediaBus.Media.Audio.Raw
 import Data.MediaBus.Media.Buffer
 import Data.MediaBus.Media.Channels
 import Data.MediaBus.Stream
-import Data.MediaBus.Ticks
+import Data.MediaBus.Basics.Ticks
 import Data.Proxy
 import Data.Streaming.Process
        (Inherited(..), streamingProcess, waitForStreamingProcess)

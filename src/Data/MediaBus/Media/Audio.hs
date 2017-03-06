@@ -4,7 +4,7 @@ module Data.MediaBus.Media.Audio
 
 import Data.MediaBus.Media
 import Data.MediaBus.Media.Channels
-import Data.MediaBus.Ticks
+import Data.MediaBus.Basics.Ticks
 import Control.Lens
 
 -- | Family of audio media types, indexed by the sampleRate, the channel layout

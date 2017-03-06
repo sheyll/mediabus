@@ -17,7 +17,7 @@ import Data.MediaBus.Media.Buffer
 import Data.MediaBus.Media.Channels
 import Data.MediaBus.Media.Samples
 import Data.MediaBus.Media.Segment
-import Data.MediaBus.Ticks
+import Data.MediaBus.Basics.Ticks
 import Data.Typeable
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.Mutable as M

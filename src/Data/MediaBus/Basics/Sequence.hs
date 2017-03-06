@@ -1,4 +1,4 @@
-module Data.MediaBus.Sequence
+module Data.MediaBus.Basics.Sequence
     ( SeqNum(..)
     , type SeqNum8
     , type SeqNum16
@@ -9,8 +9,8 @@ module Data.MediaBus.Sequence
     ) where
 
 import           Test.QuickCheck            ( Arbitrary(..) )
-import           Data.MediaBus.Monotone
-import           Data.MediaBus.Series
+import           Data.MediaBus.Basics.Monotone
+import           Data.MediaBus.Basics.Series
 import           Control.Lens
 import           Data.Default
 import           Text.Printf
