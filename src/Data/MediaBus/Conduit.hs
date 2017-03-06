@@ -1,3 +1,4 @@
+-- | Conduit extras
 module Data.MediaBus.Conduit
     ( annotateTypeC
     , annotateTypeCIn

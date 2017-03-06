@@ -63,4 +63,4 @@ segmentC' dpx = evalStateC (0, Nothing) $ awaitForever go
 
 forgetSegmentationC :: (NFData c, Monad m)
                     => Conduit (Stream i s t p (Segment d c)) m (Stream i s t p c)
-forgetSegmentationC = mapPayloadC' _segmentContent
+forgetSegmentationC = mapFrameContentC' _segmentContent

@@ -70,7 +70,7 @@ instance ( HasRate i
 concealMissing
   :: (NFData c, Monad m)
   => c -> Conduit (Stream i s t p (Discontinous c)) m (Stream i s t p c)
-concealMissing conceal = mapPayloadC' go
+concealMissing conceal = mapFrameContentC' go
   where
     go (Got !b) = b
     go Missing = conceal -- TODO delete ??

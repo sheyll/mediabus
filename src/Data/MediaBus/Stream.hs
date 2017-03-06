@@ -24,9 +24,9 @@ module Data.MediaBus.Stream
     , mapSeqNumC
     , mapTicksC
     , mapTicksC'
-    , mapPayloadMC
-    , mapPayloadMC'
-    , mapPayloadC'
+    , mapFrameContentMC
+    , mapFrameContentMC'
+    , mapFrameContentC'
     , foldStream
     , foldStreamM
     , concatStreamContents
@@ -271,20 +271,20 @@ mapTicksC' :: (NFData t, Monad m)
            -> Conduit (Stream i s t p c) m (Stream i s t' p c)
 mapTicksC' = mapC . withStrategy rdeepseq . over timestamp
 
-mapPayloadMC :: Monad m
+mapFrameContentMC :: Monad m
              => (c -> m c')
              -> Conduit (Stream i s t p c) m (Stream i s t p c')
-mapPayloadMC = mapMC . mapMOf eachFrameContent
+mapFrameContentMC = mapMC . mapMOf eachFrameContent
 
-mapPayloadMC' :: (NFData (Stream i s t p c'), Monad m)
+mapFrameContentMC' :: (NFData (Stream i s t p c'), Monad m)
               => (c -> m c')
               -> Conduit (Stream i s t p c) m (Stream i s t p c')
-mapPayloadMC' !f = mapMC (mapMOf eachFrameContent f >=> return . withStrategy rdeepseq)
+mapFrameContentMC' !f = mapMC (mapMOf eachFrameContent f >=> return . withStrategy rdeepseq)
 
-mapPayloadC' :: (NFData c', Monad m)
+mapFrameContentC' :: (NFData c', Monad m)
              => (c -> c')
              -> Conduit (Stream i s t p c) m (Stream i s t p c')
-mapPayloadC' !f = mapC (over eachFrameContent (withStrategy rdeepseq . f))
+mapFrameContentC' !f = mapC (over eachFrameContent (withStrategy rdeepseq . f))
 
 foldStream :: (Monoid o, Monad m)
            => (Stream i s t p c -> o)
@@ -307,7 +307,7 @@ concatStreamContents = foldStream (fromMaybe mempty .
                                                    framePayload))
 
 
--- * Media Data Synchronization
+-- * Media Data Synchronization TODO move back to Ticks??
 
 -- | Overwrite the timestamp of a stream of things that  have a time stamp field
 --  (i.e. 'HasTimestamp' instances)  and also a duration, such that the

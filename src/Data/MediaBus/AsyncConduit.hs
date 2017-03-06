@@ -38,7 +38,6 @@ withAsyncPolledSource
      , KnownRate r
      , Integral t
      , Integral s
-     , Default c
      , Default p
      , HasStaticDuration c
      , HasDuration c

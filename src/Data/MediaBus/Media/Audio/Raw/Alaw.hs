@@ -48,12 +48,12 @@ instance IsPcmValue ALaw where
 alawToS16
   :: (NFData cIn, NFData cOut, Monad m, EachChannelL cIn cOut ALaw S16)
   => Conduit (Stream i s t p cIn) m (Stream i s t p cOut)
-alawToS16 = mapPayloadC' (over eachChannel decodeALawSample)
+alawToS16 = mapFrameContentC' (over eachChannel decodeALawSample)
 
 s16ToAlaw
   :: (NFData cIn, NFData cOut, Monad m, EachChannelL cIn cOut S16 ALaw)
   => Conduit (Stream i s t p cIn) m (Stream i s t p cOut)
-s16ToAlaw = mapPayloadC' (over eachChannel encodeALawSample)
+s16ToAlaw = mapFrameContentC' (over eachChannel encodeALawSample)
 
 decodeALawSample :: ALaw -> S16
 decodeALawSample (MkALaw !a') =

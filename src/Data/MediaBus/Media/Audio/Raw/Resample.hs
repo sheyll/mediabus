@@ -40,7 +40,7 @@ resample8to16kHz'
      )
   => Pcm ch sa -> Conduit (Stream i s t p cIn) m (Stream i s t p cOut)
 resample8to16kHz' !sa =
-  evalStateC sa (mapPayloadMC' (mapMOf mediaBuffer resample))
+  evalStateC sa (mapFrameContentMC' (mapMOf mediaBuffer resample))
   where
     resample :: MediaBuffer (Pcm ch sa)
              -> StateT (Pcm ch sa) m (MediaBuffer (Pcm ch sa))

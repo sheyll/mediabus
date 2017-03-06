@@ -1,14 +1,12 @@
 module Data.MediaBus.DebugSink
-    ( ) where
+    ( debugAudioPlaybackSink ) where
 
 import           Data.MediaBus.Media
 import           Data.MediaBus.Media.Audio.Raw
 import           Data.MediaBus.Media.Audio
 import           Data.MediaBus.Media.Channels
 import           Data.MediaBus.Media.Buffer
-import           Data.MediaBus.Media.Segment
 import           Data.MediaBus.Ticks
-import           Data.MediaBus.Payload
 import           Data.MediaBus.Stream
 import           System.IO               ( Handle, hClose )
 import           System.Process          ( shell )
@@ -19,7 +17,6 @@ import           Data.Conduit
 import           Control.Monad.IO.Class
 import           Data.Proxy
 import           Text.Printf
-import           GHC.TypeLits
 import           Data.Default
 import           Control.Lens
 
