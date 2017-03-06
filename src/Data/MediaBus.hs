@@ -22,7 +22,6 @@ import Data.MediaBus.Media.Samples as X
 import Data.MediaBus.Media.Segment as X
 import Data.MediaBus.Monotone as X
 import Data.MediaBus.OrderedBy as X
-import Data.MediaBus.Payload as X
 import Data.MediaBus.Reorder as X
 import Data.MediaBus.Sequence as X
 import Data.MediaBus.Series as X

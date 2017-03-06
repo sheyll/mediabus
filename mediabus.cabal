@@ -38,7 +38,6 @@ library
                      , Data.MediaBus.Monotone
                      , Data.MediaBus.OrderedBy
                      , Data.MediaBus.StreamSegment
-                     , Data.MediaBus.Payload
                      , Data.MediaBus.Reorder
                      , Data.MediaBus.Sequence
                      , Data.MediaBus.Series

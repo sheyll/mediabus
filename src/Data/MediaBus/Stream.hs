@@ -1,11 +1,11 @@
 module Data.MediaBus.Stream
-    ( HasPayload(..)
-    , FrameCtx(..)
+    ( FrameCtx(..)
     , frameCtxSourceId
     , frameCtxSeqNumRef
     , frameCtxTimestampRef
     , frameCtxInit
     , Frame(..)
+    , EachFrameContent(..)
     , frameSeqNum
     , frameTimestamp
     , framePayload
@@ -40,7 +40,6 @@ import           Control.Lens
 import           Data.MediaBus.Sequence
 import           Data.MediaBus.Media
 import           Data.MediaBus.Media.Channels
-import           Data.MediaBus.Payload
 import           Data.MediaBus.Ticks
 import           Data.MediaBus.Series
 import           Control.Monad.Writer.Strict ( tell )
@@ -114,14 +113,22 @@ deriving instance Functor (Frame s t)
 
 makeLenses ''Frame
 
+-- | Class for types that have a 'Traversal' for '_framePayload'
+class EachFrameContent s t where
+  type FrameContentFrom s
+  type FrameContentTo t
+  eachFrameContent :: Traversal s t (FrameContentFrom s) (FrameContentTo t)
+
+instance EachFrameContent (Frame s t c) (Frame s t c') where
+  type FrameContentFrom (Frame s t c) = c
+  type FrameContentTo (Frame s t c') = c'
+  eachFrameContent = framePayload
+
 instance (EachChannel c c') =>
          EachChannel (Frame s t c) (Frame s t c') where
   type ChannelsFrom (Frame s t c) = c
   type ChannelsTo (Frame s t c') = c'
   eachChannel = framePayload
-
-instance HasPayload (Frame s t c) (Frame s t c') c c' where
-  payload = framePayload
 
 instance (HasMedia c c') => HasMedia (Frame s t c) (Frame s t c') where
   type MediaFrom (Frame s t c) = MediaFrom c
@@ -171,9 +178,6 @@ instance EachChannel (Frame s t c) (Frame s t c')
     type ChannelsTo (Stream i s t p c') = ChannelsTo (Frame s t c')
     eachChannel = stream . _Next . eachChannel
 
-instance HasPayload (Stream i s t p c) (Stream i s t p c') c c' where
-  payload = stream . _Next . payload
-
 instance HasDuration c =>
          HasDuration (Stream i s t p c) where
     getDuration = maybe 0 getDuration . preview (stream . _Next)
@@ -187,6 +191,11 @@ instance HasTimestamp (Stream i s t p c) where
     type GetTimestamp (Stream i s t p c) = t
     type SetTimestamp (Stream i s t p c) t' = Stream i s t' p c
     timestamp = stream . timestamp
+
+instance EachFrameContent (Stream i s t p c) (Stream i s t p c') where
+  type FrameContentFrom (Stream i s t p c) = c
+  type FrameContentTo (Stream i s t p c') = c'
+  eachFrameContent = stream . _Next . framePayload
 
 instance (Default c, Default s, Default t) =>
          Default (Stream i s t p c) where
@@ -265,17 +274,17 @@ mapTicksC' = mapC . withStrategy rdeepseq . over timestamp
 mapPayloadMC :: Monad m
              => (c -> m c')
              -> Conduit (Stream i s t p c) m (Stream i s t p c')
-mapPayloadMC = mapMC . mapMOf payload
+mapPayloadMC = mapMC . mapMOf eachFrameContent
 
 mapPayloadMC' :: (NFData (Stream i s t p c'), Monad m)
               => (c -> m c')
               -> Conduit (Stream i s t p c) m (Stream i s t p c')
-mapPayloadMC' !f = mapMC (mapMOf payload f >=> return . withStrategy rdeepseq)
+mapPayloadMC' !f = mapMC (mapMOf eachFrameContent f >=> return . withStrategy rdeepseq)
 
 mapPayloadC' :: (NFData c', Monad m)
              => (c -> c')
              -> Conduit (Stream i s t p c) m (Stream i s t p c')
-mapPayloadC' !f = mapC (over payload (withStrategy rdeepseq . f))
+mapPayloadC' !f = mapC (over eachFrameContent (withStrategy rdeepseq . f))
 
 foldStream :: (Monoid o, Monad m)
            => (Stream i s t p c -> o)

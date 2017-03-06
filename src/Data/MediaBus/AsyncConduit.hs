@@ -83,7 +83,7 @@ payloadQSink
 payloadQSink (MkPayloadQ _ _ !ringRef) = awaitForever go
   where
     go !x = do
-      maybe (return ()) pushInRing (x ^? payload)
+      maybe (return ()) pushInRing (x ^? eachFrameContent)
       return ()
       where
         pushInRing !buf' =
