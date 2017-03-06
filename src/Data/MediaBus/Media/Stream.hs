@@ -1,9 +1,15 @@
+-- | A media 'Stream' is often represented by a 'Series' of related 'Frame's
+-- with a 'FrameCtx' created when the 'Stream' 'Start's. This module contains
+-- the basic definitions of the building blocks of media content that is create,
+-- processed, and presented by a possibly infinite 'Series' of chunks called
+-- 'Frame's.
 module Data.MediaBus.Media.Stream
   ( FrameCtx(..)
   , frameCtxSourceId
   , frameCtxSeqNumRef
   , frameCtxTimestampRef
   , frameCtxInit
+  , EachFrameCtxInit(..)
   , Frame(..)
   , EachFrameContent(..)
   , frameSeqNum
@@ -26,17 +32,31 @@ import GHC.Generics (Generic)
 import Test.QuickCheck
 import Text.Printf
 
+-- | Meta information about a media stream.
 data FrameCtx i s t p = MkFrameCtx
-  { _frameCtxSourceId :: !i
-  , _frameCtxTimestampRef :: !t
-  , _frameCtxSeqNumRef :: !s
-  , _frameCtxInit :: !p
+  { _frameCtxSourceId :: !i -- ^ An identifier for the stream, e.g. a track name
+                           -- or an RTP SSRC
+  , _frameCtxTimestampRef :: !t -- ^ The start time stamp of a stream all time
+                               -- stamps in the 'Frame's are relative to this.
+  , _frameCtxSeqNumRef :: !s -- ^ The start sequence number of a stream all
+                            -- sequence numbers in the 'Frame's are relative to
+                            -- this.
+  , _frameCtxInit :: !p -- ^ An extra field for media type specific extra
+                       -- information, like the init segment of an ISOBMFF
+                       -- media.
   } deriving (Eq, Ord, Generic)
 
 instance (NFData i, NFData s, NFData t, NFData p) =>
          NFData (FrameCtx i s t p)
 
 makeLenses ''FrameCtx
+
+-- | Class for types that have a 'Traversal' for '_frameCtxInit'
+class EachFrameCtxInit s t where
+  type FrameCtxInitFrom s
+  type FrameCtxInitTo t
+  -- | A traversal for the 'FrameCtx' initial content, skipping over any 'Frame'
+  eachFrameCtxInit :: Traversal s t (FrameCtxInitFrom s) (FrameCtxInitTo t)
 
 instance HasTimestamp (FrameCtx i s t p) where
   type GetTimestamp (FrameCtx i s t p) = t
@@ -74,9 +94,11 @@ instance (Show i, Show s, Show t, Show p) =>
 -- of audio to a single pulse coded audio sample, of course it could also be a
 -- video frame or a chat message.
 data Frame s t c = MkFrame
-  { _frameTimestamp :: !t
-  , _frameSeqNum :: !s
-  , _framePayload :: !c
+  { _frameTimestamp :: !t -- ^ The timestamp at which the representation of the
+                         -- media content in this frame **begins**
+  , _frameSeqNum :: !s -- ^ The sequence number of that frame, useful to detect
+                      -- missing frames
+  , _framePayload :: !c -- ^ The actual (media) content.
   } deriving (Eq, Ord, Generic)
 
 instance (NFData c, NFData s, NFData t) =>
@@ -90,6 +112,8 @@ makeLenses ''Frame
 class EachFrameContent s t where
   type FrameContentFrom s
   type FrameContentTo t
+  -- | A traversal for the frame content of all 'Frame's, skipping over any
+  -- 'FrameCtx'
   eachFrameContent :: Traversal s t (FrameContentFrom s) (FrameContentTo t)
 
 instance EachFrameContent (Frame s t c) (Frame s t c') where
@@ -136,6 +160,9 @@ instance (Show s, Show t, Show v) =>
   show (MkFrame ts sn v) =
     printf "FRAME: %15s | %15s | %s" (show sn) (show ts) (show v)
 
+-- | A type for values that belong to a 'Series' of 'Frame's started by a
+-- 'FrameCtx'. This combines the sum type 'Series' which has either 'Start' or
+-- 'Next' with 'FrameCtx' and 'Frame'.
 newtype Stream i s t p c = MkStream
   { _stream :: Streamish i s t p c
   } deriving (Ord, Eq, Arbitrary, Generic)
@@ -143,6 +170,8 @@ newtype Stream i s t p c = MkStream
 instance (NFData i, NFData s, NFData t, NFData c, NFData p) =>
          NFData (Stream i s t p c)
 
+-- | This is the type alias that 'Stream' is a newtype wrapper of, see the
+-- description of 'Stream'.
 type Streamish i s t p c = Series (FrameCtx i s t p) (Frame s t c)
 
 makeLenses ''Stream
