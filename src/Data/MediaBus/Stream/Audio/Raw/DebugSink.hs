@@ -1,4 +1,4 @@
-module Data.MediaBus.DebugSink
+module Data.MediaBus.Stream.Audio.Raw.DebugSink
   ( debugAudioPlaybackSink
   ) where
 

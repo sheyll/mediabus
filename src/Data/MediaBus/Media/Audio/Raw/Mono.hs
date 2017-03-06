@@ -1,4 +1,4 @@
--- | Single channel pcm audio
+-- | Single channel (Mono) PCM audio
 module Data.MediaBus.Media.Audio.Raw.Mono
   ( Mono()
   ) where
@@ -19,7 +19,6 @@ data Mono
 instance KnownChannelLayout Mono where
   numberOfChannels _ = 1
 
--- | Single channel mono audio
 newtype instance  Pcm Mono s = MkMonoSample{_monoSample :: s}
                              deriving (CanBeBlank, NFData, Eq, Storable, Default, Typeable,
                                        Arbitrary, IsPcmValue, Num, Ord, Integral, Real, Enum)

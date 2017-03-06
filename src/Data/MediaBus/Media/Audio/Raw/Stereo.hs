@@ -1,4 +1,4 @@
--- | Single channel pcm audio
+-- | Stereo PCM audio
 module Data.MediaBus.Media.Audio.Raw.Stereo ( Stereo()  ) where
 
 import           Foreign.Storable

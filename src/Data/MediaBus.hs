@@ -10,13 +10,11 @@ import Data.MediaBus.Basics.Series as X
 import Data.MediaBus.Basics.SourceId as X
 import Data.MediaBus.Basics.Ticks as X
 import Data.MediaBus.Conduit as X
-import Data.MediaBus.DebugSink as X
 import Data.MediaBus.Media as X
 import Data.MediaBus.Media.Audio as X
 import Data.MediaBus.Media.Audio.Raw as X
 import Data.MediaBus.Media.Audio.Raw.Alaw as X
 import Data.MediaBus.Media.Audio.Raw.Mono as X
-import Data.MediaBus.Stream.Audio.Raw.Resample as X
 import Data.MediaBus.Media.Audio.Raw.Signed16bit as X
 import Data.MediaBus.Media.Audio.Raw.Stereo as X
 import Data.MediaBus.Media.Blank as X
@@ -29,7 +27,9 @@ import Data.MediaBus.Media.Stream as X
 import Data.MediaBus.Stream as X
 import Data.MediaBus.Stream.Async as X
 import Data.MediaBus.Stream.Audio.Raw.Alaw as X
+import Data.MediaBus.Stream.Audio.Raw.DebugSink as X
+import Data.MediaBus.Stream.Audio.Raw.Resample as X
+import Data.MediaBus.Stream.Discontinous as X
 import Data.MediaBus.Stream.Reorder as X
 import Data.MediaBus.Stream.Segment as X
-import Data.MediaBus.Stream.Discontinous as X
 import Data.MediaBus.Transport.Udp as X
