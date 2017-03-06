@@ -1,25 +1,29 @@
+-- | Discontinous content. Some media streams, like e.g. RTP streams received
+-- via UDP, have the characteristic, that some times packages are lost. This
+-- module provides a type that is isomorphic to 'Maybe' to indicate that the
+-- content for a media frame is missing.
+-- It might take some effort to detect missing content, like a jitter buffer, or the comparison of sequence numbers.
+--
+--  TODO: Create a gap detection mechanism, a simple stateful monad that knows the next timestamp etc.
 module Data.MediaBus.Media.Discontinous
   ( Discontinous(..)
   , _Missing
   , _Got
-  , concealMissing
   ) where
 
-import Conduit
 import Control.Lens
 import Control.Parallel.Strategies (NFData)
 import Data.Default
 import Data.MediaBus.Media
 import Data.MediaBus.Media.Channels
 import Data.MediaBus.Media.Samples
-import Data.MediaBus.Stream
 import Data.MediaBus.Basics.Ticks
 import GHC.Generics (Generic)
 
---  TODO create a gap detection mechanism, a simple stateful conduit that knows the next timestamp
+-- | Content that can be 'Missing'.
 data Discontinous a
-  = Missing
-  | Got !a
+  = Missing -- ^ A place holder for frame content that is missing
+  | Got !a -- ^ Available content
   deriving (Show, Generic)
 
 instance NFData a =>
@@ -66,11 +70,3 @@ instance ( HasRate i
          ) =>
          CoerceRate (Discontinous i) (Discontinous j) ri rj where
   coerceRate px = over _Got (coerceRate px)
-
-concealMissing
-  :: (NFData c, Monad m)
-  => c -> Conduit (Stream i s t p (Discontinous c)) m (Stream i s t p c)
-concealMissing conceal = mapFrameContentC' go
-  where
-    go (Got !b) = b
-    go Missing = conceal -- TODO delete ??

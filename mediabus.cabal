@@ -17,7 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:
                        Data.MediaBus
-                     , Data.MediaBus.AsyncConduit
+                     , Data.MediaBus.Stream.Async
                      , Data.MediaBus.Basics.Clock
                      , Data.MediaBus.Basics.Monotone
                      , Data.MediaBus.Basics.OrderedBy
@@ -32,7 +32,7 @@ library
                      , Data.MediaBus.Media.Audio.Raw
                      , Data.MediaBus.Media.Audio.Raw.Alaw
                      , Data.MediaBus.Media.Audio.Raw.Mono
-                     , Data.MediaBus.Media.Audio.Raw.Resample
+                     , Data.MediaBus.Stream.Audio.Raw.Resample
                      , Data.MediaBus.Media.Audio.Raw.Signed16bit
                      , Data.MediaBus.Media.Audio.Raw.Stereo
                      , Data.MediaBus.Media.Blank
@@ -41,9 +41,12 @@ library
                      , Data.MediaBus.Media.Discontinous
                      , Data.MediaBus.Media.Samples
                      , Data.MediaBus.Media.Segment
-                     , Data.MediaBus.Reorder
+                     , Data.MediaBus.Media.Stream
+                     , Data.MediaBus.Stream.Reorder
                      , Data.MediaBus.Stream
-                     , Data.MediaBus.StreamSegment
+                     , Data.MediaBus.Stream.Segment
+                     , Data.MediaBus.Stream.Discontinous
+                     , Data.MediaBus.Stream.Audio.Raw.Alaw
                      , Data.MediaBus.Transport.Udp
   default-language:    Haskell2010
   ghc-options:       -O2 -Wall -funbox-strict-fields -fno-warn-unused-do-bind  -fprint-explicit-kinds
@@ -121,10 +124,10 @@ test-suite tests
   type:                exitcode-stdio-1.0
   hs-source-dirs:      specs
   main-is:             Spec.hs
-  other-modules:       Data.MediaBus.Media.Audio.Raw.ResampleSpec
+  other-modules:       Data.MediaBus.Stream.Audio.Raw.ResampleSpec
                      , Data.MediaBus.Media.BufferSpec
-                     , Data.MediaBus.StreamSegmentSpec
-                     , Data.MediaBus.ReorderSpec
+                     , Data.MediaBus.Stream.SegmentSpec
+                     , Data.MediaBus.Stream.ReorderSpec
                      , Data.MediaBus.StreamSpec
                      , Data.MediaBus.Basics.TicksSpec
   default-language:    Haskell2010

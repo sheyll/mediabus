@@ -1,22 +1,19 @@
 module Data.MediaBus.Media.Audio.Raw.Alaw
   ( ALaw(..)
-  , alawToS16
-  , s16ToAlaw
+  , encodeALawSample
+  , decodeALawSample
   , alawSample
   ) where
 
 import Control.Lens
 import Control.DeepSeq (NFData)
 import Data.Bits
-import Data.Conduit
 import Data.Default
 import Data.Function (on)
 import Data.Int
 import Data.MediaBus.Media.Audio.Raw
 import Data.MediaBus.Media.Audio.Raw.Signed16bit
 import Data.MediaBus.Media.Blank
-import Data.MediaBus.Media.Channels
-import Data.MediaBus.Stream
 import Data.Typeable
 import Data.Word
 import Foreign.Storable
@@ -44,16 +41,6 @@ instance CanBeBlank ALaw where
 
 instance IsPcmValue ALaw where
   pcmAverage !x !y = encodeALawSample $ (pcmAverage `on` decodeALawSample) x y
-
-alawToS16
-  :: (NFData cIn, NFData cOut, Monad m, EachChannelL cIn cOut ALaw S16)
-  => Conduit (Stream i s t p cIn) m (Stream i s t p cOut)
-alawToS16 = mapFrameContentC' (over eachChannel decodeALawSample)
-
-s16ToAlaw
-  :: (NFData cIn, NFData cOut, Monad m, EachChannelL cIn cOut S16 ALaw)
-  => Conduit (Stream i s t p cIn) m (Stream i s t p cOut)
-s16ToAlaw = mapFrameContentC' (over eachChannel encodeALawSample)
 
 decodeALawSample :: ALaw -> S16
 decodeALawSample (MkALaw !a') =

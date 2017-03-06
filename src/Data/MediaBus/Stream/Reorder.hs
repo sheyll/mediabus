@@ -1,10 +1,10 @@
 {-# OPTIONS -Wno-unused-top-binds #-}
-module Data.MediaBus.Reorder
+module Data.MediaBus.Stream.Reorder
     ( reorderFramesBySeqNumC
     , reorderFramesByC
     ) where
 
-import           Data.MediaBus.Stream
+import           Data.MediaBus.Media.Stream
 import           Data.MediaBus.Basics.Sequence
 import           Data.MediaBus.Basics.OrderedBy
 import           Data.MediaBus.Basics.Series

@@ -1,4 +1,4 @@
-module Data.MediaBus.AsyncConduit
+module Data.MediaBus.Stream.Async
   ( withAsyncPolledSource
   , PayloadQ()
   , mkPayloadQ
@@ -16,9 +16,10 @@ import Control.Monad.State
 import Control.Parallel.Strategies (NFData, rdeepseq, withStrategy)
 import Data.Default
 import Data.MediaBus.Basics.Clock
-import Data.MediaBus.Media.Discontinous
-import Data.MediaBus.Stream
 import Data.MediaBus.Basics.Ticks
+import Data.MediaBus.Media.Discontinous
+import Data.MediaBus.Media.Stream
+import Data.MediaBus.Stream
 import Data.Proxy
 import Data.Time.Clock
 import Debug.Trace

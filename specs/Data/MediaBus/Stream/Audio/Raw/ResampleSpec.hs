@@ -1,4 +1,4 @@
-module Data.MediaBus.Media.Audio.Raw.ResampleSpec
+module Data.MediaBus.Stream.Audio.Raw.ResampleSpec
   ( spec
   ) where
 

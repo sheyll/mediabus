@@ -1,6 +1,6 @@
 -- | Make a 'Stream' of media a segmented stream by using that has content which is an instance of 'CanSegment'.
 -- TODO move or merge - after deciding howto proceed with the package structure in general
-module Data.MediaBus.StreamSegment
+module Data.MediaBus.Stream.Segment
     ( segmentC
     , segmentC'
     , forgetSegmentationC
@@ -8,10 +8,11 @@ module Data.MediaBus.StreamSegment
 
 import           Conduit
 import           Data.Monoid
-import           Data.MediaBus.Media.Segment
 import           Data.MediaBus.Basics.Series
-import           Data.MediaBus.Stream
 import           Data.MediaBus.Basics.Ticks
+import           Data.MediaBus.Media.Segment
+import           Data.MediaBus.Media.Stream
+import           Data.MediaBus.Stream
 import           Control.Lens
 import           Data.Default
 import           Data.Proxy

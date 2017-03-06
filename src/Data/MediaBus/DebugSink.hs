@@ -12,6 +12,7 @@ import Data.MediaBus.Media.Audio
 import Data.MediaBus.Media.Audio.Raw
 import Data.MediaBus.Media.Buffer
 import Data.MediaBus.Media.Channels
+import Data.MediaBus.Media.Stream
 import Data.MediaBus.Stream
 import Data.MediaBus.Basics.Ticks
 import Data.Proxy

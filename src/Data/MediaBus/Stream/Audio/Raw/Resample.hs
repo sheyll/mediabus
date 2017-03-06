@@ -1,5 +1,5 @@
 -- | Simple, preliminary (raw-)audio resampling
-module Data.MediaBus.Media.Audio.Raw.Resample
+module Data.MediaBus.Stream.Audio.Raw.Resample
   ( resample8to16kHz'
   ) where
 
@@ -11,11 +11,11 @@ import Control.Parallel.Strategies (NFData, rdeepseq, using)
 import Data.MediaBus.Media.Audio.Raw
 import Data.MediaBus.Media.Buffer
 import Data.MediaBus.Media.Samples
+import Data.MediaBus.Media.Stream
 import Data.MediaBus.Stream
 import Data.MediaBus.Basics.Ticks
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.Mutable as M
-import GHC.Stack
 
 -- | Resample 'RawAudio' 'IsMedia' from an 8kHz sample rate to 16 kHz, using a
 --   simple (and fast) linear interpolation between each sample.
@@ -36,7 +36,6 @@ resample8to16kHz'
      , EachSampleL cIn cOut (Pcm ch sa) (Pcm ch sa)
      , IsPcmValue (Pcm ch sa)
      , HasMediaBufferL cIn cOut (MediaBuffer (SamplesFrom cIn)) (MediaBuffer (SamplesTo cOut))
-     , HasCallStack
      )
   => Pcm ch sa -> Conduit (Stream i s t p cIn) m (Stream i s t p cOut)
 resample8to16kHz' !sa =
