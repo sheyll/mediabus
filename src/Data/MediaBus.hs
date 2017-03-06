@@ -32,4 +32,5 @@ import Data.MediaBus.Stream.Audio.Raw.Resample as X
 import Data.MediaBus.Stream.Discontinous as X
 import Data.MediaBus.Stream.Reorder as X
 import Data.MediaBus.Stream.Segment as X
+import Data.MediaBus.Stream.Timing as X
 import Data.MediaBus.Transport.Udp as X

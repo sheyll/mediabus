@@ -1,8 +1,6 @@
--- | Conduits for 'Stream's
+-- | Conduit combinators for 'Stream's
 module Data.MediaBus.Stream
-    (
-
-      yieldStreamish
+    ( yieldStreamish
     , yieldStreamish'
     , yieldNextFrame
     , yieldNextFrame'
@@ -21,8 +19,6 @@ module Data.MediaBus.Stream
     , foldStream
     , foldStreamM
     , concatStreamContents
-    , convertTicksC'
-    , deriveFrameTimestamp
     ) where
 
 import           Conduit
@@ -33,43 +29,50 @@ import           Data.MediaBus.Media.Stream
 import           Data.MediaBus.Basics.Ticks
 import           Data.MediaBus.Basics.Series
 import           Control.Monad.Writer.Strict ( tell )
-import           Control.Monad.State.Strict
 import           Data.Maybe
 import           Control.Parallel.Strategies ( NFData, rdeepseq, withStrategy )
 
+-- | Yield a 'Stream' from 'Streamish'
 yieldStreamish :: Monad m
                => Streamish i s t p c
                -> Conduit a m (Stream i s t p c)
 yieldStreamish = yield . MkStream
 
+-- | Strict version of 'yieldStreamish'
 yieldStreamish' :: (NFData i, NFData s, NFData t, NFData c, NFData p, Monad m)
                 => Streamish i s t p c
                 -> Conduit a m (Stream i s t p c)
 yieldStreamish' = yield . withStrategy rdeepseq . MkStream
 
+-- | Yield the next 'Frame' of a 'Stream'
 yieldNextFrame :: Monad m => Frame s t c -> Conduit a m (Stream i s t p c)
 yieldNextFrame = yieldStreamish . Next
 
+-- | Strict version of 'yieldNextFrame'
 yieldNextFrame' :: (NFData i, NFData s, NFData t, NFData c, NFData p, Monad m)
                 => Frame s t c
                 -> Conduit a m (Stream i s t p c)
 yieldNextFrame' = yieldStreamish' . Next
 
+-- | Yield the starting 'FrameCtx' of a 'Stream'
 yieldStartFrameCtx :: Monad m
                    => FrameCtx i s t p
                    -> Conduit a m (Stream i s t p c)
 yieldStartFrameCtx = yieldStreamish . Start
 
+-- | Strict version of 'yieldStartFrameCtx'
 yieldStartFrameCtx' :: (NFData i, NFData s, NFData t, NFData c, NFData p, NFData (FrameCtx i s t p), Monad m)
                     => FrameCtx i s t p
                     -> Conduit a m (Stream i s t p c)
 yieldStartFrameCtx' = yieldStreamish' . Start
 
+-- | Create a 'Stream' conduit from a 'Streamish' conduit.
 overStreamC :: Monad m
-            => Conduit (Series (FrameCtx i s t p) (Frame s t c)) m (Series (FrameCtx i' s' t' p') (Frame s' t' c'))
+            => Conduit (Streamish i s t p c) m (Streamish i' s' t' p' c')
             -> Conduit (Stream i s t p c) m (Stream i' s' t' p' c')
 overStreamC = mapInput _stream (Just . MkStream) . mapOutput MkStream
 
+-- | A conduit that receives 'Stream's and yields all 'Frames'
 toFramesC :: Monad m => Conduit (Stream i s t p c) m (Frame s t c)
 toFramesC = awaitForever go
   where
@@ -78,46 +81,59 @@ toFramesC = awaitForever go
     go (MkStream (Next !frm)) =
         yield frm
 
-mapFramesC' :: (NFData i, NFData s, NFData t, NFData c', Monad m)
-            => (Frame s t c -> Frame s t c')
-            -> Conduit (Stream i s t p c) m (Stream i s t p c')
-mapFramesC' !f = mapC (over (stream . _Next) (withStrategy rdeepseq f))
-
+-- | A conduit that applies the given function to every 'Frame' of a 'Stream'.
 mapFramesC :: Monad m
            => (Frame s t c -> m (Frame s t c'))
            -> Conduit (Stream i s t p c) m (Stream i s t p c')
 mapFramesC !f = mapMC (mapMOf (stream . _Next) f)
 
+-- | Strict version of 'mapFramesC'
+mapFramesC' :: (NFData i, NFData s, NFData t, NFData c', Monad m)
+            => (Frame s t c -> Frame s t c')
+            -> Conduit (Stream i s t p c) m (Stream i s t p c')
+mapFramesC' !f = mapC (over (stream . _Next) (withStrategy rdeepseq f))
+
+-- | A conduit that applies the given function to every sequence number of a
+-- 'Stream', in 'Frame's as well as 'FrameCtx's.
 mapSeqNumC :: Monad m
            => (s -> s')
            -> Conduit (Stream i s t p c) m (Stream i s' t p c)
 mapSeqNumC = mapC . over seqNum
 
+-- | A conduit that applies the given function to every time stamp of a
+-- 'Stream', in 'Frame's as well as 'FrameCtx's.
 mapTicksC :: Monad m
           => (t -> t')
           -> Conduit (Stream i s t p c) m (Stream i s t' p c)
 mapTicksC = mapC . over timestamp
 
+-- | A strict version of 'mapTicksC'.
 mapTicksC' :: (NFData t, Monad m)
            => (t -> t')
            -> Conduit (Stream i s t p c) m (Stream i s t' p c)
 mapTicksC' = mapC . withStrategy rdeepseq . over timestamp
 
+-- | A conduit that applies the given monadic function to 'eachFrameContent' of a 'Stream'.
 mapFrameContentMC :: Monad m
              => (c -> m c')
              -> Conduit (Stream i s t p c) m (Stream i s t p c')
 mapFrameContentMC = mapMC . mapMOf eachFrameContent
 
+-- | A strict variant of 'mapFrameContentMC'
 mapFrameContentMC' :: (NFData (Stream i s t p c'), Monad m)
               => (c -> m c')
               -> Conduit (Stream i s t p c) m (Stream i s t p c')
 mapFrameContentMC' !f = mapMC (mapMOf eachFrameContent f >=> return . withStrategy rdeepseq)
 
+-- | A conduit that applies the given pure function to 'eachFrameContent' of a 'Stream'.
 mapFrameContentC' :: (NFData c', Monad m)
              => (c -> c')
              -> Conduit (Stream i s t p c) m (Stream i s t p c')
 mapFrameContentC' !f = mapC (over eachFrameContent (withStrategy rdeepseq . f))
 
+-- | Like 'Data.Foldable.foldMap' this uses the given function to extract a
+-- monoidal value and 'mappend's all results into a single value, which is
+-- returned when the 'Conduit' terminates.
 foldStream :: (Monoid o, Monad m)
            => (Stream i s t p c -> o)
            -> Sink (Stream i s t p c) m o
@@ -125,41 +141,18 @@ foldStream !f = execWriterC $
     awaitForever $
         tell .
             f
-
+-- | Monadic variant of 'foldStream'
 foldStreamM :: (Monoid o, Monad m)
             => (Stream i s t p c -> m o)
             -> Sink (Stream i s t p c) m o
 foldStreamM !f = execWriterC $
     awaitForever (lift . lift . f >=> tell)
 
+-- | Under the constraint that the stream content is a monoid, fold over the
+-- stream appending all frame contents, i.e. 'foldStream' of 'eachFrameContent'.
+-- When the conduit finishes the monoidal value is returned.
 concatStreamContents :: (Monoid c, Monad m) => Sink (Stream i s t p c) m c
 concatStreamContents = foldStream (fromMaybe mempty .
                                        (^? stream .
                                                _Next .
                                                    framePayload))
-
-
--- * Media Data Synchronization TODO move back to Ticks??
-
--- | Overwrite the timestamp of a stream of things that  have a time stamp field
---  (i.e. 'HasTimestamp' instances)  and also a duration, such that the
---  timestamps increment by the duration starting from 0.
-deriveFrameTimestamp :: forall m r t a. (Monad m, CanBeTicks r t, HasDuration a, HasTimestamp a)
-                     => Ticks r t
-                     -> Conduit a m (SetTimestamp a (Ticks r t))
-deriveFrameTimestamp t0 =
-    evalStateC t0 (awaitForever yieldSync)
-  where
-    yieldSync :: a -> Conduit a (StateT (Ticks r t) m) (SetTimestamp a (Ticks r t))
-    yieldSync sb = do
-        t <- get
-        modify (+ (nominalDiffTime # getDuration sb))
-        yield (sb & timestamp .~ t)
-
--- | Recalculate all timestamps in a 'Stream'
-convertTicksC' :: forall proxy0 proxy1 m r t r' t' i s c p.
-               (NFData t, NFData t', CanBeTicks r t, CanBeTicks r' t', Monad m, NFData t')
-               => proxy0 '(r, t)
-               -> proxy1 '(r', t')
-               -> Conduit (Stream i s (Ticks r t) p c) m (Stream i s (Ticks r' t') p c)
-convertTicksC' _ _ = mapTicksC' convertTicks

@@ -31,6 +31,7 @@ annotateTypeSource _ = id
 annotateTypeSink :: proxy a -> Sink a m r -> Sink a m r
 annotateTypeSink _ = id
 
+
 exitAfterC :: Monad m => Int -> Conduit a m a
 exitAfterC 0 = return ()
 exitAfterC n = await >>= maybe (return ()) (yield >=> const (exitAfterC (n - 1)))
