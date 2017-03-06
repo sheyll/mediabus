@@ -16,7 +16,7 @@ spec = describe "segmentC" $ do
         property $
             \ls -> withTestData ls
                                 PT5
-                                (\_ outputs -> (Prelude.drop 1 outputs) `shouldSatisfy`
+                                (\_ outputs -> Prelude.drop 1 outputs `shouldSatisfy`
                                      all ((== getDuration PT5) . getDuration))
     it "only drops less than the static duration" $
         property $
@@ -39,8 +39,8 @@ spec = describe "segmentC" $ do
 withTestData :: HasStaticDuration d
              => [TestLen]
              -> PT d
-             -> ([Stream () Word8 (Ticks 8000 Word32) () (SampleBuffer (S16 8000))]
-                 -> [Stream () Word8 (Ticks 8000 Word32) () (Segment d (SampleBuffer (S16 8000)))]
+             -> ([Stream () Word8 (Ticks (Hz 8000) Word32) () (Audio (Hz 8000) Mono (Raw S16))]
+                 -> [Stream () Word8 (Ticks (Hz 8000) Word32) () (Segment d (Audio (Hz 8000) Mono (Raw S16)))]
                  -> res)
              -> res
 withTestData ls pt f = let inputs = mkTestInputs ls
@@ -59,15 +59,15 @@ ticksStrictlyMonotoneIncreasing dur outs =
         all (== dur) $ zipWith (-) (Prelude.drop 2 res) (Prelude.drop 1 res)
 
 runSegmentC :: (HasStaticDuration d, HasDuration c, CanSegment c, Monoid c)
-            => [Stream () Word8 (Ticks 8000 Word32) () c]
+            => [Stream () Word8 (Ticks (Hz 8000) Word32) () c]
             -> PT d
-            -> [Stream () Word8 (Ticks 8000 Word32) () (Segment d c)]
+            -> [Stream () Word8 (Ticks (Hz 8000) Word32) () (Segment d c)]
 runSegmentC inputs _p = runConduitPure (sourceList inputs .|
                                             segmentC .|
                                             consume)
 
 mkTestInputs :: [TestLen]
-             -> [Stream () Word8 (Ticks 8000 Word32) () (SampleBuffer (S16 8000))]
+             -> [Stream () Word8 (Ticks (Hz 8000) Word32) () (Audio (Hz 8000) Mono (Raw S16))]
 mkTestInputs = reverse .
     snd .
         foldl (\((ts0, sn0), acc0) (MkTestLen len) ->
@@ -77,15 +77,15 @@ mkTestInputs = reverse .
               ((0, 0), [ mkTestStartPacket ])
   where
     mkTestPacket sn ts len =
-        MkStream (Next (MkFrame ts sn (MkSampleBuffer (V.replicate len 0))))
+        MkStream (Next (MkFrame ts sn (pcmMediaBuffer . mediaBufferVector # (V.replicate len 0))))
 
     mkTestStartPacket = MkStream (Start (MkFrameCtx () 0 0 ()))
 
 data PT d where
-        PT0 :: PT (0 :@ 1)
-        PT5 :: PT (5 :@ 1000)
-        PT10 :: PT (80 :@ 8000)
-        PT20 :: PT (320 :@ 16000)
+        PT0 :: PT (0 :/ Hz 1)
+        PT5 :: PT (5 :/ Hz 1000)
+        PT10 :: PT (80 :/ Hz 8000)
+        PT20 :: PT (320 :/ Hz 16000)
 
 instance HasStaticDuration d =>
          HasDuration (PT d) where

@@ -7,15 +7,12 @@ module Data.MediaBus.Sequence
     , HasSeqNumT(..)
     , HasSeqNum(..)
     , fromSeqNum
-    , synchronizeToSeqNum
     ) where
 
 import           Test.QuickCheck            ( Arbitrary(..) )
-import           Conduit
 import           Data.MediaBus.Monotone
 import           Data.MediaBus.Series
 import           Control.Lens
-import           Control.Monad.State.Strict
 import           Data.Default
 import           Text.Printf
 import           GHC.Generics               ( Generic )
@@ -81,14 +78,3 @@ deriving instance (Real a, Num a, Eq a, LocalOrd a) => Real
 
 deriving instance (Integral a, Enum a, Real a, Eq a, LocalOrd a) =>
          Integral (SeqNum a)
-
-synchronizeToSeqNum :: (HasSeqNum a, Monad m, Integral i)
-                    => i
-                    -> Conduit a m (SetSeqNum a i)
-synchronizeToSeqNum startSeq =
-    evalStateC startSeq (awaitForever yieldSeq)
-  where
-    yieldSeq !a = do
-        !nextSeq <- get
-        modify (+ 1)
-        yield (a & seqNum .~ nextSeq)

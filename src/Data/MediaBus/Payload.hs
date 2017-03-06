@@ -1,9 +1,11 @@
-module Data.MediaBus.Payload ( HasPayload(..) ) where
+module Data.MediaBus.Payload ( HasPayload(..), type HasPayload', payload' ) where
 
 import           Control.Lens
 
-class (SetPayload a (GetPayload a) ~ a) =>
-      HasPayload a where
-    type GetPayload a
-    type SetPayload a b
-    payload :: Traversal a (SetPayload a b) (GetPayload a) b
+class HasPayload s t a b | s -> a, t -> b where
+    payload :: Traversal s t a b
+
+type HasPayload' s a = HasPayload s s a a
+
+payload' :: HasPayload' s a => Traversal' s a
+payload' = payload

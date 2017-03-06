@@ -1,4 +1,4 @@
-module Data.MediaBus.SampleSpec ( spec ) where
+module Data.MediaBus.Media.BufferSpec ( spec ) where
 
 import           Data.MediaBus
 import           Control.Monad
@@ -8,16 +8,16 @@ import           Data.Char
 import qualified Data.Vector.Generic.Mutable as V
 
 spec :: Spec
-spec = describe "SampleBuffer" $ do
+spec = describe "MediaBuffer" $ do
     it "can be mapped over with eachSample" $
-        (sampleBufferFromList "Hello" & eachSample %~ toUpper) `shouldBe`
-        sampleBufferFromList "HELLO"
+        (mediaBufferFromList "Hello" & each %~ toUpper) `shouldBe`
+        mediaBufferFromList "HELLO"
     it "can be mapped over with eachSample changing the type" $
-        (sampleBufferFromList "Hello" & sampleBuffer . sampleVector .
+        (mediaBufferFromList "Hello" & mediaBufferVector .
              each %~
              const True) `shouldBe`
-        sampleBufferFromList (Prelude.replicate 5 True)
-    describe "mutateSamples" $
+        mediaBufferFromList (Prelude.replicate 5 True)
+    describe "modifyMediaBuffer" $
         it "modifies in-place" $
         let f v =
                 -- imperative safe destructive updates
@@ -25,9 +25,9 @@ spec = describe "SampleBuffer" $ do
                 in
                     forM_ [0 .. (n - 1) `div` 2] (\i -> V.swap v i (n - 1 - i))
         in
-            mutateSamples f (sampleBufferFromList [1 .. 4 :: Int]) `shouldBe`
-                sampleBufferFromList [4,3 .. 1]
-    describe "unsafeMutateSamples" $
+            modifyMediaBuffer f (mediaBufferFromList [1 .. 4 :: Int]) `shouldBe`
+                mediaBufferFromList [4,3 .. 1]
+    describe "unsafeModifyMediaBuffer" $
         it "modifies in-place and can return values" $
         let f v =
                 -- imperative safe destructive updates
@@ -38,8 +38,8 @@ spec = describe "SampleBuffer" $ do
                               V.swap v i (n - 1 - i)
                               return i)
         in
-            unsafeMutateSamples f (sampleBufferFromList [1 .. 4 :: Int]) `shouldBe`
-                ([ 0, 1 ], sampleBufferFromList [4,3 .. 1])
+            unsafeModifyMediaBuffer f (mediaBufferFromList [1 .. 4 :: Int]) `shouldBe`
+                ([ 0, 1 ], mediaBufferFromList [4,3 .. 1])
 
 data TestFormat = MkTestFormat
     deriving Show

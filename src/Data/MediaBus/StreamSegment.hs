@@ -6,24 +6,23 @@ module Data.MediaBus.StreamSegment
 
 import           Conduit
 import           Data.Monoid
+import           Data.MediaBus.Media.Segment
+import           Data.MediaBus.Series
 import           Data.MediaBus.Stream
 import           Data.MediaBus.Ticks
-import           Data.MediaBus.Segment
 import           Control.Lens
 import           Data.Default
-import           Data.MediaBus.Series
 import           Data.Proxy
-import           GHC.TypeLits
 import           Control.Parallel.Strategies ( NFData )
 
 -- | The packetizer recombines incoming packets into 'Segment's of the given
 -- size. The sequence numbers will be offsetted by the number extra frames
 -- generated.
-segmentC :: (Num s, Monad m, HasDuration c, CanSegment c, Monoid c, Default i, KnownNat r, Integral t, HasStaticDuration d)
+segmentC :: (Num s, Monad m, CanSegment c, Monoid c, Default i, CanBeTicks r t, HasDuration c, HasStaticDuration d)
          => Conduit (Stream i s (Ticks r t) p c) m (Stream i s (Ticks r t) p (Segment d c))
 segmentC = segmentC' Proxy
 
-segmentC' :: (Num s, Monad m, HasDuration c, CanSegment c, Monoid c, Default i, KnownNat r, Integral t, HasStaticDuration d)
+segmentC' :: (Num s, Monad m, CanSegment c, Monoid c, Default i, CanBeTicks r t, HasDuration c, HasStaticDuration d)
           => proxy d
           -> Conduit (Stream i s (Ticks r t) p c) m (Stream i s (Ticks r t) p (Segment d c))
 segmentC' dpx = evalStateC (0, Nothing) $ awaitForever go

@@ -1,19 +1,18 @@
-module Data.MediaBus.BlankMedia
+module Data.MediaBus.Media.Blank
     ( CanGenerateBlankMedia(..)
     , CanBeBlank(..)
     ) where
 
 import           Data.MediaBus.Ticks
-import           Data.MediaBus.Segment
+import           Data.MediaBus.Media.Segment
 import           Data.Time.Clock
-import           GHC.TypeLits
 import           Control.Lens
 import           Data.Proxy
 
 class CanGenerateBlankMedia a where
     blankFor :: NominalDiffTime -> a
-    blankFor dt = blankForTicks (nominalDiffTime # dt :: Ticks 1000000000000 Integer)
-    blankForTicks :: (Integral i, KnownNat r) => Ticks r i -> a
+    blankFor dt = blankForTicks (nominalDiffTime # dt :: PicoSeconds)
+    blankForTicks :: CanBeTicks r i => Ticks r i -> a
     blankForTicks ticks = blankFor (from nominalDiffTime # ticks)
 
 class CanBeBlank a where

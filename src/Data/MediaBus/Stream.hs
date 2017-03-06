@@ -27,25 +27,28 @@ module Data.MediaBus.Stream
     , mapPayloadMC
     , mapPayloadMC'
     , mapPayloadC'
-    , convertTicksC'
     , foldStream
     , foldStreamM
     , concatStreamContents
+    , convertTicksC'
+    , deriveFrameTimestamp
     ) where
 
 import           Conduit
 import           Control.Monad
 import           Control.Lens
 import           Data.MediaBus.Sequence
+import           Data.MediaBus.Media
+import           Data.MediaBus.Media.Channels
 import           Data.MediaBus.Payload
 import           Data.MediaBus.Ticks
 import           Data.MediaBus.Series
 import           Control.Monad.Writer.Strict ( tell )
+import           Control.Monad.State.Strict
 import           Data.Maybe
 import           Test.QuickCheck
 import           Data.Default
 import           Text.Printf
-import           GHC.TypeLits
 import           GHC.Generics                ( Generic )
 import           Control.Parallel.Strategies ( NFData, rdeepseq, withStrategy )
 
@@ -115,10 +118,19 @@ deriving instance Functor (Frame s t)
 
 makeLenses ''Frame
 
-instance HasPayload (Frame s t c) where
-    type GetPayload (Frame s t c) = c
-    type SetPayload (Frame s t c) d = Frame s t d
-    payload = framePayload
+instance (EachChannel c c') =>
+         EachChannel (Frame s t c) (Frame s t c') where
+  type ChannelsFrom (Frame s t c) = c
+  type ChannelsTo (Frame s t c') = c'
+  eachChannel = framePayload
+
+instance HasPayload (Frame s t c) (Frame s t c') c c' where
+  payload = framePayload
+
+instance (HasMedia c c') => HasMedia (Frame s t c) (Frame s t c') where
+  type MediaFrom (Frame s t c) = MediaFrom c
+  type MediaTo (Frame s t c') = MediaTo c'
+  media = framePayload . media
 
 instance HasTimestampT (Frame s t c) where
     type GetTimestamp (Frame s t c) = t
@@ -161,10 +173,14 @@ type Streamish i s t p c = Series (FrameCtx i s t p) (Frame s t c)
 
 makeLenses ''Stream
 
-instance HasPayload (Stream i s t p c) where
-    type GetPayload (Stream i s t p c) = c
-    type SetPayload (Stream i s t p c) d = Stream i s t p d
-    payload = stream . _Next . payload
+instance EachChannel (Frame s t c) (Frame s t c')
+  => EachChannel (Stream i s t p c) (Stream i s t p c') where
+    type ChannelsFrom (Stream i s t p c) = ChannelsFrom (Frame s t c)
+    type ChannelsTo (Stream i s t p c') = ChannelsTo (Frame s t c')
+    eachChannel = stream . _Next . eachChannel
+
+instance HasPayload (Stream i s t p c) (Stream i s t p c') c c' where
+  payload = stream . _Next . payload
 
 instance HasDuration c =>
          HasDuration (Stream i s t p c) where
@@ -273,13 +289,6 @@ mapPayloadC' :: (NFData c', Monad m)
              -> Conduit (Stream i s t p c) m (Stream i s t p c')
 mapPayloadC' !f = mapC (over payload (withStrategy rdeepseq . f))
 
-convertTicksC' :: forall proxy0 proxy1 m r t r' t' i s c p.
-               (NFData t, NFData t', KnownNat r, KnownNat r', Integral t, Integral t', Monad m, NFData t')
-               => proxy0 '(r, t)
-               -> proxy1 '(r', t')
-               -> Conduit (Stream i s (Ticks r t) p c) m (Stream i s (Ticks r' t') p c)
-convertTicksC' _ _ = mapTicksC' convertTicks
-
 foldStream :: (Monoid o, Monad m)
            => (Stream i s t p c -> o)
            -> Sink (Stream i s t p c) m o
@@ -299,3 +308,29 @@ concatStreamContents = foldStream (fromMaybe mempty .
                                        (^? stream .
                                                _Next .
                                                    framePayload))
+
+
+-- * Media Data Synchronization
+
+-- | Overwrite the timestamp of a stream of things that  have a time stamp field
+--  (i.e. 'HasTimestamp' instances)  and also a duration, such that the
+--  timestamps increment by the duration starting from 0.
+deriveFrameTimestamp :: forall m r t a. (Monad m, CanBeTicks r t, HasDuration a, HasTimestamp a)
+                     => Ticks r t
+                     -> Conduit a m (SetTimestamp a (Ticks r t))
+deriveFrameTimestamp t0 =
+    evalStateC t0 (awaitForever yieldSync)
+  where
+    yieldSync :: a -> Conduit a (StateT (Ticks r t) m) (SetTimestamp a (Ticks r t))
+    yieldSync sb = do
+        t <- get
+        modify (+ (nominalDiffTime # getDuration sb))
+        yield (sb & timestamp .~ t)
+
+-- | Recalculate all timestamps in a 'Stream'
+convertTicksC' :: forall proxy0 proxy1 m r t r' t' i s c p.
+               (NFData t, NFData t', CanBeTicks r t, CanBeTicks r' t', Monad m, NFData t')
+               => proxy0 '(r, t)
+               -> proxy1 '(r', t')
+               -> Conduit (Stream i s (Ticks r t) p c) m (Stream i s (Ticks r' t') p c)
+convertTicksC' _ _ = mapTicksC' convertTicks
