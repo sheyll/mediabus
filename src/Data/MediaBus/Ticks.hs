@@ -40,7 +40,6 @@ module Data.MediaBus.Ticks
   , type StaticTicksRate
   , type StaticTicksTicks
   , HasDuration(..)
-  , HasTimestampT(..)
   , HasTimestamp(..)
   , HasStaticDuration(..)
   , getStaticDurationTicks
@@ -323,29 +322,14 @@ instance HasDuration a =>
   getDurationTicks Nothing = 0
   getDurationTicks (Just !a) = getDurationTicks a
 
--- TODO rename *Timestamp to *Tick
+-- | Types that contain a 'Timestamp'
 class SetTimestamp t (GetTimestamp t) ~ t =>
-      HasTimestampT t where
+      HasTimestamp t where
   type GetTimestamp t
   type SetTimestamp t s
-
--- | Types that contain a 'Timestamp'
-class HasTimestampT t -- TODO inline HasTimestampT again
-       =>
-      HasTimestamp t where
   timestamp :: Lens t (SetTimestamp t s) (GetTimestamp t) s
   timestamp' :: Lens' t (GetTimestamp t)
   timestamp' = timestamp
-
-instance (HasTimestampT a, HasTimestampT b, GetTimestamp a ~ GetTimestamp b) =>
-         HasTimestampT (Series a b) where
-  type GetTimestamp (Series a b) = GetTimestamp a
-  type SetTimestamp (Series a b) t = Series (SetTimestamp a t) (SetTimestamp b t)
-
-instance (HasTimestamp a, HasTimestamp b, GetTimestamp a ~ GetTimestamp b) =>
-         HasTimestamp (Series a b) where
-  timestamp f (Start a) = Start <$> timestamp f a
-  timestamp f (Next b) = Next <$> timestamp f b
 
 -- ** Known at compile time durations
 -- *** Static ticks TODO rename static -> known
@@ -397,3 +381,11 @@ ticksFromStaticDuration
   => proxy (ticks :/ rate) -> Ticks rate i
 ticksFromStaticDuration _ =
   MkTicks (fromIntegral (natVal (Proxy :: Proxy ticks)))
+
+
+instance (HasTimestamp a, HasTimestamp b, GetTimestamp a ~ GetTimestamp b) =>
+         HasTimestamp (Series a b) where
+  type GetTimestamp (Series a b) = GetTimestamp a
+  type SetTimestamp (Series a b) t = Series (SetTimestamp a t) (SetTimestamp b t)
+  timestamp f (Start a) = Start <$> timestamp f a
+  timestamp f (Next b) = Next <$> timestamp f b

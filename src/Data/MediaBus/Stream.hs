@@ -64,21 +64,17 @@ instance (NFData i, NFData s, NFData t, NFData p) =>
 
 makeLenses ''FrameCtx
 
-instance HasTimestampT (FrameCtx i s t p) where
+instance HasTimestamp (FrameCtx i s t p) where
     type GetTimestamp (FrameCtx i s t p) = t
     type SetTimestamp (FrameCtx i s t p) t' = (FrameCtx i s t' p)
-
-instance HasTimestamp (FrameCtx i s t p) where
     timestamp = frameCtxTimestampRef
-
-instance HasSeqNumT (FrameCtx i s t p) where
-    type GetSeqNum (FrameCtx i s t p) = s
-    type SetSeqNum (FrameCtx i s t p) x = FrameCtx i x t p
 
 instance HasDuration (FrameCtx i s t p) where
     getDuration _ = 0
 
 instance HasSeqNum (FrameCtx i s t p) where
+    type GetSeqNum (FrameCtx i s t p) = s
+    type SetSeqNum (FrameCtx i s t p) x = FrameCtx i x t p
     seqNum = frameCtxSeqNumRef
 
 instance (Arbitrary i, Arbitrary s, Arbitrary t, Arbitrary p) =>
@@ -132,18 +128,14 @@ instance (HasMedia c c') => HasMedia (Frame s t c) (Frame s t c') where
   type MediaTo (Frame s t c') = MediaTo c'
   media = framePayload . media
 
-instance HasTimestampT (Frame s t c) where
+instance HasTimestamp (Frame s t c) where
     type GetTimestamp (Frame s t c) = t
     type SetTimestamp (Frame s t c) t' = Frame s t' c
-
-instance HasTimestamp (Frame s t c) where
     timestamp = frameTimestamp
 
-instance HasSeqNumT (Frame s t c) where
+instance HasSeqNum (Frame s t c) where
     type GetSeqNum (Frame s t c) = s
     type SetSeqNum (Frame s t c) x = Frame x t c
-
-instance HasSeqNum (Frame s t c) where
     seqNum = frameSeqNum
 
 instance HasDuration c =>
@@ -186,18 +178,14 @@ instance HasDuration c =>
          HasDuration (Stream i s t p c) where
     getDuration = maybe 0 getDuration . preview (stream . _Next)
 
-instance HasSeqNumT (Stream i s t p c) where
+instance HasSeqNum (Stream i s t p c) where
     type GetSeqNum (Stream i s t p c) = s
     type SetSeqNum (Stream i s t p c) x = Stream i x t p c
-
-instance HasSeqNum (Stream i s t p c) where
     seqNum = stream . seqNum
 
-instance HasTimestampT (Stream i s t p c) where
+instance HasTimestamp (Stream i s t p c) where
     type GetTimestamp (Stream i s t p c) = t
     type SetTimestamp (Stream i s t p c) t' = Stream i s t' p c
-
-instance HasTimestamp (Stream i s t p c) where
     timestamp = stream . timestamp
 
 instance (Default c, Default s, Default t) =>
