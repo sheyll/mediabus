@@ -1,11 +1,6 @@
--- | Conduit extras
-module Data.MediaBus.Conduit
-    ( annotateTypeC
-    , annotateTypeCIn
-    , annotateTypeCOut
-    , annotateTypeSink
-    , annotateTypeSource
-    , exitAfterC
+-- | Probabilistic tracing conduits using 'Debug.Trace'
+module Data.MediaBus.Stream.Trace
+    ( exitAfterC
     , traceShowC
     , traceShowSink
     ) where
@@ -16,26 +11,12 @@ import           Control.Monad.State.Strict as State
 import           Debug.Trace
 import           System.Random
 
-annotateTypeC :: proxy a -> Conduit a m a -> Conduit a m a
-annotateTypeC _ = id
-
-annotateTypeCIn :: proxy a -> Conduit a m b -> Conduit a m b
-annotateTypeCIn _ = id
-
-annotateTypeCOut :: proxy b -> Conduit a m b -> Conduit a m b
-annotateTypeCOut _ = id
-
-annotateTypeSource :: proxy a -> Source m a -> Source m a
-annotateTypeSource _ = id
-
-annotateTypeSink :: proxy a -> Sink a m r -> Sink a m r
-annotateTypeSink _ = id
-
-
-exitAfterC :: Monad m => Int -> Conduit a m a
-exitAfterC 0 = return ()
-exitAfterC n = await >>= maybe (return ()) (yield >=> const (exitAfterC (n - 1)))
-
+-- | Receive and trace the 'Show'n value prefixed by a message and then yield
+-- down the stream. Since the number of elements sent over a conduit can be
+-- tremendous, a tracing probability parameter was added, that can be between
+-- @0.0@ - @1.0@, and sets the probability of with which a message will be
+-- traced. This uses 'Debug.Trace.traceM' internally. Do not use this for
+-- logging.
 traceShowC :: (Show a, Monad m) => Double -> String -> Conduit a m a
 traceShowC probability msg =
     evalStateC (mkStdGen 100, 0 :: Integer) $
@@ -56,6 +37,15 @@ traceShowC probability msg =
                 else State.put (g', omitted + 1)
             yield x
 
+-- | Like 'traceShowC' but implemented as a 'Consumer' that also returns all
+-- received inputs as a list when the conduit terminates.
 traceShowSink :: (Show a, Monad m) => Double -> String -> Consumer a m [a]
 traceShowSink probability msg =
     traceShowC probability msg .| consume
+
+-- | For profiling and debugging it can sometimes be useful, to have a circuit
+-- breaker, like this conduit, that exists after an given number of items have
+-- been processed, and, until then just yields all inputs.
+exitAfterC :: Monad m => Int -> Conduit a m a
+exitAfterC 0 = return ()
+exitAfterC n = await >>= maybe (return ()) (yield >=> const (exitAfterC (n - 1)))

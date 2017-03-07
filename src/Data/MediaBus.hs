@@ -9,7 +9,6 @@ import Data.MediaBus.Basics.Sequence as X
 import Data.MediaBus.Basics.Series as X
 import Data.MediaBus.Basics.SourceId as X
 import Data.MediaBus.Basics.Ticks as X
-import Data.MediaBus.Conduit as X
 import Data.MediaBus.Media as X
 import Data.MediaBus.Media.Audio as X
 import Data.MediaBus.Media.Audio.Raw as X
@@ -33,4 +32,6 @@ import Data.MediaBus.Stream.Discontinous as X
 import Data.MediaBus.Stream.Reorder as X
 import Data.MediaBus.Stream.Segment as X
 import Data.MediaBus.Stream.Timing as X
+import Data.MediaBus.Stream.Trace as X
+import Data.MediaBus.Stream.TypeAnnotations as X
 import Data.MediaBus.Transport.Udp as X

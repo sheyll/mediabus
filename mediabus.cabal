@@ -24,7 +24,6 @@ library
                      , Data.MediaBus.Basics.Series
                      , Data.MediaBus.Basics.SourceId
                      , Data.MediaBus.Basics.Ticks
-                     , Data.MediaBus.Conduit
                      , Data.MediaBus.Media
                      , Data.MediaBus.Media.Audio
                      , Data.MediaBus.Media.Audio.Raw
@@ -48,6 +47,8 @@ library
                      , Data.MediaBus.Stream.Reorder
                      , Data.MediaBus.Stream.Segment
                      , Data.MediaBus.Stream.Timing
+                     , Data.MediaBus.Stream.Trace
+                     , Data.MediaBus.Stream.TypeAnnotations
                      , Data.MediaBus.Transport.Udp
   default-language:    Haskell2010
   ghc-options:       -O2 -Wall -funbox-strict-fields -fno-warn-unused-do-bind  -fprint-explicit-kinds
