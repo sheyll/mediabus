@@ -7,8 +7,6 @@ module Data.MediaBus.Basics.Clock
   , timeSince
   , UtcClock(..)
   , useUtcClock
-  , _utcClockTimeDiff
-  , _utcClockTime
   , utcClockTimeDiff
   ) where
 

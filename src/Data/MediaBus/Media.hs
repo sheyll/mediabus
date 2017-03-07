@@ -1,3 +1,5 @@
+-- | This module contains mainly the informative 'IsMedia' type class and
+-- corresponding type classes for media lenses.
 module Data.MediaBus.Media
   ( IsMedia()
   , MediaDescription(..)

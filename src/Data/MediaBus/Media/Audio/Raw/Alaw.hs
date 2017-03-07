@@ -1,8 +1,11 @@
+-- | This module defines the **Alaw** audio sample type, as well as compading
+-- conversion functions from/to 'S16' values.
 module Data.MediaBus.Media.Audio.Raw.Alaw
-  ( ALaw(..)
+  ( ALaw()
   , encodeALawSample
   , decodeALawSample
   , alawSample
+  , alawValue
   ) where
 
 import Control.Lens
@@ -20,8 +23,10 @@ import Foreign.Storable
 import GHC.Generics (Generic)
 import Test.QuickCheck (Arbitrary(..))
 
+-- | A PCM audio sample represented by a single byte, that can be converted to a
+-- signed 13bit audio sample.
 newtype ALaw = MkALaw
-  { _alawSample :: Word8
+  { _alawValue :: Word8
   } deriving ( Show
              , Storable
              , Num
@@ -34,7 +39,14 @@ newtype ALaw = MkALaw
              , Typeable
              )
 
-makeLenses ''ALaw
+-- | An 'Iso' for 'ALaw' sample values.
+alawValue :: Iso' ALaw Word8
+alawValue = iso _alawValue MkALaw
+
+-- | An 'Iso' between 'ALaw' and 'S16' using 'encodeALawSample' and
+-- 'decodeALawSample'.
+alawSample :: Iso' ALaw S16
+alawSample = iso decodeALawSample encodeALawSample
 
 instance CanBeBlank ALaw where
   blank = 0xD5
@@ -42,6 +54,8 @@ instance CanBeBlank ALaw where
 instance IsPcmValue ALaw where
   pcmAverage !x !y = encodeALawSample $ (pcmAverage `on` decodeALawSample) x y
 
+-- | Uncompress an alaw sample into a linear 16 signed value, see
+-- 'encodeALawSample' for more information.
 decodeALawSample :: ALaw -> S16
 decodeALawSample (MkALaw !a') =
   let !a = a' `xor` 85
@@ -83,11 +97,10 @@ encodeALawSample (MkS16 !pcmVal') =
   let !pcmVal = pcmVal' `shiftR` 3 -- to 13 bit
       (!mask, !pcmValAbs) =
         if pcmVal >= 0
-          then ( 0xD5 -- sign (7th) bit = 1
+          then ( 0xD5 -- sign bit (bit 7) = 1
                , pcmVal)
           else ( 0x55 -- sign bit = 0
                , (-1) * pcmVal - 1)
-        -- !segments = [0x1F,0x3F,0x7F,0xFF,0x1FF,0x3FF,0x7FF,0xFFF] :: [
       !segment
         | pcmValAbs <= 31 = 0
         | pcmValAbs <= 63 = 1

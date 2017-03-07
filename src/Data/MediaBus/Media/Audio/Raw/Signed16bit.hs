@@ -1,3 +1,4 @@
+-- | This module defines the 16-bit PCM audio sample type.
 module Data.MediaBus.Media.Audio.Raw.Signed16bit
   ( S16(..)
   , s16Sample
@@ -15,6 +16,7 @@ import Data.Vector.Storable (Storable)
 import Test.QuickCheck
 import Text.Printf
 
+-- | A value representing a signed PCM audio sample with a width of 16 bit.
 newtype S16 = MkS16
   { _s16Sample :: Int16
   } deriving ( Eq
@@ -28,7 +30,9 @@ newtype S16 = MkS16
              , Typeable
              )
 
-makeLenses ''S16
+-- | An 'Iso' from/to the sample value of an 'S16'
+s16Sample :: Iso' S16 Int16
+s16Sample = iso _s16Sample MkS16
 
 instance Show S16 where
   show (MkS16 !x) = printf "S16: %6d" x

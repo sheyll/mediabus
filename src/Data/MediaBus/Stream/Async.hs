@@ -1,9 +1,12 @@
+-- | Asynchronous execution of conduits. This module contains a set of functions
+-- to concurrently execute 'Stream' processing conduits and couple them using
+-- 'TBQueue's.
 module Data.MediaBus.Stream.Async
   ( withAsyncPolledSource
-  , PayloadQ()
-  , mkPayloadQ
-  , payloadQSink
-  , payloadQSource
+  , FrameContentQ()
+  , mkFrameContentQ
+  , frameContentQSink
+  , frameContentQSource
   ) where
 
 import Conduit
@@ -26,13 +29,16 @@ import Debug.Trace
 import System.Random
 import Text.Printf
 
-data PollPayloadSourceSt s t = MkPollPayloadSourceSt
+data PollFrameContentSourceSt s t = MkPollFrameContentSourceSt
   { _ppSeqNum :: !s
   , _ppTicks :: !t
   }
 
-makeLenses ''PollPayloadSourceSt
+makeLenses ''PollFrameContentSourceSt
 
+-- | Asynchronously run a 'Source' connected to a 'FrameContentQ' and create a
+-- new source that consumes the queue by polling periodically from that queue,
+-- generating a 'Discontinous' output.
 withAsyncPolledSource
   :: ( MonadResource m
      , MonadBaseControl IO m
@@ -56,31 +62,38 @@ withAsyncPolledSource
   -> ((Async (), Source m (Stream i s (Ticks r t) p (Discontinous c))) -> m o)
   -> m o
 withAsyncPolledSource !frameQueueLen !src !f = do
-  !pq <- mkPayloadQ frameQueueLen
+  !pq <- mkFrameContentQ frameQueueLen
   withAsync
-    (runConduit (src .| payloadQSink pq))
-    (\a -> f (void a, payloadQSource pq))
+    (runConduit (src .| frameContentQSink pq))
+    (\a -> f (void a, frameContentQSource pq))
 
-data PayloadQ a = MkPayloadQ
-  { _payloadQSegmentDuration :: !NominalDiffTime
-  , _payloadQPollIntervall :: !NominalDiffTime
-  , _payloadQRing :: !(TBQueue a)
+-- | A queue for 'frameContent' to decouple concurrent conduits carrying
+-- 'Stream's. Under the hood a 'TBQueue' is used. A queue also knows it's
+-- default segment duration and preferred polling interval.
+data FrameContentQ a = MkFrameContentQ
+  { _frameContentQSegmentDuration :: !NominalDiffTime
+  , _frameContentQPollInterval :: !NominalDiffTime
+  , _frameContentQRing :: !(TBQueue a)
   }
 
-mkPayloadQ
+-- | Create a new 'FrameContentQ' with an upper bound on the queue length.
+mkFrameContentQ
   :: forall m a.
      (HasStaticDuration a, MonadBaseControl IO m)
-  => Int -> m (PayloadQ a)
-mkPayloadQ qlen =
-  MkPayloadQ segmentDuration (fromIntegral qlen * 0.5 * segmentDuration) <$>
+  => Int -> m (FrameContentQ a)
+mkFrameContentQ qlen =
+  MkFrameContentQ segmentDuration (fromIntegral qlen * 0.5 * segmentDuration) <$>
   liftBase (newTBQueueIO qlen)
   where
     segmentDuration = getStaticDuration (Proxy :: Proxy a)
 
-payloadQSink
+-- | Consume the 'frameContent's of a 'Stream' and write them into a
+-- 'FrameContentQ'. When the queue is full, **drop the oldest element** and push
+-- in the new element, anyway.
+frameContentQSink
   :: (NFData a, MonadBaseControl IO m, Show a)
-  => PayloadQ a -> Sink (Stream i s t p a) m ()
-payloadQSink (MkPayloadQ _ _ !ringRef) = awaitForever go
+  => FrameContentQ a -> Sink (Stream i s t p a) m ()
+frameContentQSink (MkFrameContentQ _ _ !ringRef) = awaitForever go
   where
     go !x = do
       maybe (return ()) pushInRing (x ^? eachFrameContent)
@@ -94,7 +107,9 @@ payloadQSink (MkPayloadQ _ _ !ringRef) = awaitForever go
               when isFull (void $ readTBQueue ringRef)
               writeTBQueue ringRef buf
 
-payloadQSource
+-- | Periodically poll a 'FrameContentQ' and yield the content as frames with
+-- newly generated timestamp and sequence number values.
+frameContentQSource
   :: ( Random i
      , NFData c
      , NFData p
@@ -108,9 +123,9 @@ payloadQSource
      , NFData t
      , NFData s
      )
-  => PayloadQ c -> Source m (Stream i s (Ticks r t) p (Discontinous c))
-payloadQSource (MkPayloadQ pTime pollIntervall ringRef) =
-  evalStateC (MkPollPayloadSourceSt 0 0) $ do
+  => FrameContentQ c -> Source m (Stream i s (Ticks r t) p (Discontinous c))
+frameContentQSource (MkFrameContentQ pTime pollIntervall ringRef) =
+  evalStateC (MkPollFrameContentSourceSt 0 0) $ do
     yieldStart
     go False
   where
@@ -124,9 +139,9 @@ payloadQSource (MkPayloadQ pTime pollIntervall ringRef) =
         (do !(t0 :: ClockTime UtcClock) <- now
             threadDelay (_ticks pollIntervallMicros)
             !t1 <- now
-            return (_utcClockTimeDiff (diffTime t1 t0)))
+            return (diffTime t1 t0 ^. utcClockTimeDiff))
     yieldMissing !dt !wasMissing = do
-      unless wasMissing (traceM (printf "*** UNDERFLOW: Missing %s" (show dt)))
+      unless wasMissing (traceM (printf "*** UNDERFLOW: Missing %s" (show dt))) -- TODO replace by proper logging
       replicateM_ (floor (dt / pTime)) (yieldNextBuffer Missing)
     yieldStart =
       (MkFrameCtx <$> liftBase randomIO <*> use ppTicks <*> use ppSeqNum <*>

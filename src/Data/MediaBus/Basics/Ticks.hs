@@ -1,3 +1,6 @@
+-- | This module contains the 'Ticks' time unit as well as the corresponding
+-- known-at-compile-time 'StaticTicks' time unit. The time stamps are given as
+-- quotient of a 'Rate' that indicates the number of 'Ticks' per second.
 module Data.MediaBus.Basics.Ticks
   ( Rate(..)
   , type Hz
@@ -197,48 +200,64 @@ type CanBeTicks (r :: Rate) w = (KnownRate r, Integral w)
 type PicoSeconds = Ticks OnePerPicoSecond Integer
 
 -- ** Smart constructors for 'Ticks'
+-- | Alias for 'Ticks' based on a 'Word32' tick count.
 type Ticks32 r = Ticks r Word32
 
+-- | Create a 'Ticks32' from a 'Rate' given via a proxy and the number of ticks.
 mkTicks32
   :: KnownRate r
   => proxy r -> Word32 -> Ticks32 r
 mkTicks32 _ = MkTicks
 
+-- | Alias for 'Ticks' based on a 'Word64' tick count.
 type Ticks64 r = Ticks r Word64
 
+-- | Create a 'Ticks64' from a 'Rate' given via a proxy and the number of ticks.
 mkTicks64
   :: KnownRate r
   => proxy r -> Word64 -> Ticks64 r
 mkTicks64 _ = MkTicks
 
+-- | Alias for 'Ticks' based on a 'Word32' tick count with a rate of 8000 ticks per second.
 type Ticks32At8000 = Ticks32 (Hz 8000)
 
-mkTicks32At8000 :: Word32 -> Ticks32 (Hz 8000)
+-- | Create a 'Ticks32At8000' from a tick count.
+mkTicks32At8000 :: Word32 -> Ticks32At8000
 mkTicks32At8000 = MkTicks
 
+-- | Alias for 'Ticks' based on a 'Word32' tick count with a rate of 16000 ticks per second.
 type Ticks32At16000 = Ticks32 (Hz 16000)
 
-mkTicks32At16000 :: Word32 -> Ticks32 (Hz 16000)
+-- | Create a 'Ticks32At16000 from a tick count.
+mkTicks32At16000 :: Word32 -> Ticks32At16000
 mkTicks32At16000 = MkTicks
 
+-- | Alias for 'Ticks' based on a 'Word32' tick count with a rate of 48000 ticks per second.
 type Ticks32At48000 = Ticks32 (Hz 48000)
 
-mkTicks32At48000 :: Word32 -> Ticks32 (Hz 48000)
+-- | Create a 'Ticks32At48000 from a tick count.
+mkTicks32At48000 :: Word32 -> Ticks32At48000
 mkTicks32At48000 = MkTicks
 
+-- | Alias for 'Ticks' based on a 'Word64' tick count with a rate of 8000 ticks per second.
 type Ticks64At8000 = Ticks64 (Hz 8000)
 
-mkTicks64At8000 :: Word64 -> Ticks64 (Hz 8000)
+-- | Create a 'Ticks64At8000 from a tick count.
+mkTicks64At8000 :: Word64 -> Ticks64At8000
 mkTicks64At8000 = MkTicks
 
+-- | Alias for 'Ticks' based on a 'Word64' tick count with a rate of 16000 ticks per second.
 type Ticks64At16000 = Ticks64 (Hz 16000)
 
-mkTicks64At16000 :: Word64 -> Ticks64 (Hz 16000)
+-- | Create a 'Ticks64At16000 from a tick count.
+mkTicks64At16000 :: Word64 -> Ticks64At16000
 mkTicks64At16000 = MkTicks
 
+-- | Alias for 'Ticks' based on a 'Word64' tick count with a rate of 48000 ticks per second.
 type Ticks64At48000 = Ticks64 (Hz 48000)
 
-mkTicks64At48000 :: Word64 -> Ticks64 (Hz 48000)
+-- | Create a 'Ticks64At48000 from a tick count.
+mkTicks64At48000 :: Word64 -> Ticks64At48000
 mkTicks64At48000 = MkTicks
 
 instance NFData w =>

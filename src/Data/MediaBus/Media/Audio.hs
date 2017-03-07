@@ -1,3 +1,6 @@
+-- | This module centers around the data family 'Audio' that provides general
+-- info about an audio stream, such as sampling rate and channel layout and
+-- codec.
 module Data.MediaBus.Media.Audio
   ( Audio
   ) where

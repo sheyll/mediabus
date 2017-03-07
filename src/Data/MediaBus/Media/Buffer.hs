@@ -93,22 +93,28 @@ mediaBufferLength = view (mediaBufferVector . to V.length)
 
 -- ** Conversion
 -- *** List Conversion
+
+-- | Convert the media buffer vector contents to a list in O(n).
 mediaBufferToList
   :: CanBeSample s
   => MediaBuffer s -> [s]
 mediaBufferToList = view (mediaBufferVector . to V.toList)
 
+-- | Create a 'MediaBuffer' from a list in O(n).
 mediaBufferFromList
   :: CanBeSample s
   => [s] -> MediaBuffer s
 mediaBufferFromList = MkMediaBuffer . V.fromList
 
 -- *** 'ByteString' Conversion
+
+-- | An efficient conversion of a 'ByteString' to a 'MediaBuffer'
 mediaBufferFromByteString
   :: CanBeSample a
   => B.ByteString -> MediaBuffer a
 mediaBufferFromByteString = MkMediaBuffer . Spool.byteStringToVector
 
+-- | An efficient conversion of a 'MediaBuffer' to a 'ByteString'
 mediaBufferToByteString
   :: CanBeSample a
   => MediaBuffer a -> B.ByteString
