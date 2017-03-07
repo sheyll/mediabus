@@ -1,5 +1,5 @@
 name:                mediabus
-version:             0.3.0.0
+version:             0.3.0.1
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/lindenbaum/mediabus

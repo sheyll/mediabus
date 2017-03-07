@@ -1,13 +1,13 @@
--- | Value level 'Ord'er. Sometimes values are stored in e.g. 'Data.Set.Set's
--- and the default 'Ord' instance isn't what we want. In that case it would be
--- great to pass the comparison as an explicit function.
+-- | Value level 'Ord'er. Sometimes values stored in e.g. 'Data.Set.Set's have
+-- an 'Ord' instance, which does not represent the desired order. In that case
+-- use this product type to pass a value along with the value to be for
+-- comparison by the 'Eq' and 'Ord' instances.
 module Data.MediaBus.Basics.OrderedBy ( OrderedBy(..) ) where
 
--- | A wrapper around a value (to be compared) and a function to the value that
--- shall be compared against.
+-- | A wrapper around a /payload/ value paired with a value to be used when /comparing/ that payload value.
 data OrderedBy cmp a = MkOrderedBy
-  { orderedByComparableValue :: cmp
-  , orderedByValue :: a
+  { orderedByComparableValue :: cmp -- ^ Value to compare
+  , orderedByValue :: a -- ^ actual value
   }
 
 instance Eq cmp => Eq (OrderedBy cmp a) where
