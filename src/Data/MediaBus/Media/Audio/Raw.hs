@@ -37,9 +37,7 @@ class (CanBeBlank a, CanBeSample a, Arbitrary a) =>
   pcmAverage :: a -> a -> a
 
 -- | All 'Pcm' audio is audio. An 'Audio' instance with 'Pcm's in a 'MediaBuffer'.
-data instance  Audio r c (Raw t) where
-        MkPcm :: {_pcmMediaBuffer :: MediaBuffer (Pcm c t)} ->
-          Audio r c (Raw t)
+newtype instance  Audio r c (Raw t) = MkPcm {_pcmMediaBuffer :: MediaBuffer (Pcm c t)}
 
 -- | An isomorphism for 'Audio' and 'MediaBuffer'
 pcmMediaBuffer :: Iso (Audio r c (Raw t)) (Audio r' c' (Raw t')) (MediaBuffer (Pcm c t)) (MediaBuffer (Pcm c' t'))
@@ -64,6 +62,10 @@ instance (KnownRate r, CanBeSample (Pcm c t)) =>
 instance CanBeSample (Pcm c t) =>
          NFData (Audio r c (Raw t)) where
   rnf (MkPcm !buf) = rnf buf
+
+instance CanBeSample (Pcm c t) =>
+         Eq (Audio r c (Raw t)) where
+  (==) (MkPcm !buf1) (MkPcm !buf2) = buf1 == buf2
 
 instance (Typeable t, KnownRate r, KnownChannelLayout c, CanBeSample (Pcm c t)) =>
          IsMedia (Audio r c (Raw t))

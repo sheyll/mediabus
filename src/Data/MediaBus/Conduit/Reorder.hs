@@ -1,18 +1,18 @@
 -- | Reorder the 'Frame's in 'Conduit' of a 'Stream'.
 module Data.MediaBus.Conduit.Reorder
-    ( reorderFramesBySeqNumC
-    , reorderFramesByC
-    ) where
+  ( reorderFramesBySeqNumC
+  , reorderFramesByC
+  ) where
 
-import           Data.MediaBus.Media.Stream
-import           Data.MediaBus.Basics.Sequence
-import           Data.MediaBus.Basics.OrderedBy
-import           Data.MediaBus.Basics.Series
-import qualified Data.Set                         as Set
-import           Conduit
-import           Control.Lens
-import           Control.Monad.State.Strict
-import           Data.Default
+import Conduit
+import Control.Lens
+import Control.Monad.State.Strict
+import Data.Default
+import Data.MediaBus.Basics.OrderedBy
+import Data.MediaBus.Basics.Sequence
+import Data.MediaBus.Basics.Series
+import Data.MediaBus.Media.Stream
+import qualified Data.Set as Set
 
 data ReorderSt a b c = MkReorderSt
   { _expectedRank :: !a
@@ -30,20 +30,28 @@ makeLenses ''ReorderSt
 -- 'Start' will be created, and the buffered elements are silently dropped, too.
 -- When a 'Start' is received that internal buffer is flushed and all queued
 -- frames are transmitted.
-reorderFramesBySeqNumC :: (Default s, Default i, Default t, Default p, Num s, Ord s, Monad m)
-                       => Int -- ^ The maximun number of out-of-order frames to buffer.
-                       -> Conduit (Stream i s t p c) m (Stream i s t p c)
-reorderFramesBySeqNumC =
-    reorderFramesByC seqNum (+ 1)
+reorderFramesBySeqNumC
+  :: (Default s, Default i, Default t, Default p, Num s, Ord s, Monad m)
+  => Int -- ^ The maximun number of out-of-order frames to buffer.
+  -> Conduit (Stream i s t p c) m (Stream i s t p c)
+reorderFramesBySeqNumC = reorderFramesByC seqNum (+ 1)
 
 -- | Like 'reorderFramesBySeqNumC' but more general. This function allows to
 -- pass a 'Lens' to the specific field of each 'Frame', that shall be used for
 -- comparison, which governs the order.
-reorderFramesByC ::  (Monad m, Ord rank, Default i, Default t, Default s, Default p, Default rank)
-                 => Lens' (Stream i s t p c) rank -- ^ A lens for the value to be used as comparison
-                 -> (rank -> rank) -- ^ A function that returns the **expected next value** of the comparison value
-                 -> Int -- ^ The maximum number of frames to buffer
-                 -> Conduit (Stream i s t p c) m (Stream i s t p c)
+reorderFramesByC
+  :: ( Monad m
+     , Ord rank
+     , Default i
+     , Default t
+     , Default s
+     , Default p
+     , Default rank
+     )
+  => Lens' (Stream i s t p c) rank -- ^ A lens for the value to be used as comparison
+  -> (rank -> rank) -- ^ A function that returns the **expected next value** of the comparison value
+  -> Int -- ^ The maximum number of frames to buffer
+  -> Conduit (Stream i s t p c) m (Stream i s t p c)
 reorderFramesByC !frameRank !getNextRank !maxQueueLen =
   evalStateC (MkReorderSt def Set.empty 0 def) go
   where
