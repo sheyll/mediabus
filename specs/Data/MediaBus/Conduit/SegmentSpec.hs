@@ -1,4 +1,4 @@
-module Data.MediaBus.Stream.SegmentSpec ( spec ) where
+module Data.MediaBus.Conduit.SegmentSpec ( spec ) where
 
 import           Test.Hspec
 import           Data.Conduit.List

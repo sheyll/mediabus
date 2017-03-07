@@ -1,5 +1,5 @@
 -- | Conduits for converting 'ALaw' 'Stream's to 'S16' streams and vice versa.
-module Data.MediaBus.Stream.Audio.Raw.Alaw
+module Data.MediaBus.Conduit.Audio.Raw.Alaw
   ( alawToS16
   , s16ToAlaw
   ) where
@@ -11,7 +11,7 @@ import Data.MediaBus.Media.Audio.Raw.Alaw
 import Data.MediaBus.Media.Audio.Raw.Signed16bit
 import Data.MediaBus.Media.Channels
 import Data.MediaBus.Media.Stream
-import Data.MediaBus.Stream
+import Data.MediaBus.Conduit.Stream
 
 -- | Convert from 'ALaw' to 'S16'
 alawToS16

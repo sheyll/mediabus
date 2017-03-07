@@ -24,7 +24,17 @@ library
                      , Data.MediaBus.Basics.Series
                      , Data.MediaBus.Basics.SourceId
                      , Data.MediaBus.Basics.Ticks
-                     , Data.MediaBus.Media
+                     , Data.MediaBus.Conduit.Async
+                     , Data.MediaBus.Conduit.Audio.Raw.Alaw
+                     , Data.MediaBus.Conduit.Audio.Raw.DebugSink
+                     , Data.MediaBus.Conduit.Audio.Raw.Resample
+                     , Data.MediaBus.Conduit.Discontinous
+                     , Data.MediaBus.Conduit.Reorder
+                     , Data.MediaBus.Conduit.Segment
+                     , Data.MediaBus.Conduit.Stream
+                     , Data.MediaBus.Conduit.Timing
+                     , Data.MediaBus.Conduit.Trace
+                     , Data.MediaBus.Conduit.TypeAnnotations
                      , Data.MediaBus.Media.Audio
                      , Data.MediaBus.Media.Audio.Raw
                      , Data.MediaBus.Media.Audio.Raw.Alaw
@@ -35,20 +45,10 @@ library
                      , Data.MediaBus.Media.Buffer
                      , Data.MediaBus.Media.Channels
                      , Data.MediaBus.Media.Discontinous
+                     , Data.MediaBus.Media.Media
                      , Data.MediaBus.Media.Samples
                      , Data.MediaBus.Media.Segment
                      , Data.MediaBus.Media.Stream
-                     , Data.MediaBus.Stream
-                     , Data.MediaBus.Stream.Async
-                     , Data.MediaBus.Stream.Audio.Raw.Alaw
-                     , Data.MediaBus.Stream.Audio.Raw.DebugSink
-                     , Data.MediaBus.Stream.Audio.Raw.Resample
-                     , Data.MediaBus.Stream.Discontinous
-                     , Data.MediaBus.Stream.Reorder
-                     , Data.MediaBus.Stream.Segment
-                     , Data.MediaBus.Stream.Timing
-                     , Data.MediaBus.Stream.Trace
-                     , Data.MediaBus.Stream.TypeAnnotations
                      , Data.MediaBus.Transport.Udp
   default-language:    Haskell2010
   ghc-options:       -O2 -Wall -funbox-strict-fields -fno-warn-unused-do-bind  -fprint-explicit-kinds
@@ -126,11 +126,11 @@ test-suite tests
   type:                exitcode-stdio-1.0
   hs-source-dirs:      specs
   main-is:             Spec.hs
-  other-modules:       Data.MediaBus.Stream.Audio.Raw.ResampleSpec
+  other-modules:       Data.MediaBus.Conduit.Audio.Raw.ResampleSpec
                      , Data.MediaBus.Media.BufferSpec
-                     , Data.MediaBus.Stream.SegmentSpec
-                     , Data.MediaBus.Stream.ReorderSpec
-                     , Data.MediaBus.StreamSpec
+                     , Data.MediaBus.Conduit.SegmentSpec
+                     , Data.MediaBus.Conduit.ReorderSpec
+                     , Data.MediaBus.Conduit.StreamSpec
                      , Data.MediaBus.Basics.TicksSpec
   default-language:    Haskell2010
   build-depends:       QuickCheck

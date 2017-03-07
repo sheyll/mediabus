@@ -1,3 +1,5 @@
+-- | Multi media processing library.
+-- This module only reexports all other modules in this package.
 module Data.MediaBus
   ( module X
   ) where
@@ -9,7 +11,17 @@ import Data.MediaBus.Basics.Sequence as X
 import Data.MediaBus.Basics.Series as X
 import Data.MediaBus.Basics.SourceId as X
 import Data.MediaBus.Basics.Ticks as X
-import Data.MediaBus.Media as X
+import Data.MediaBus.Conduit.Async as X
+import Data.MediaBus.Conduit.Audio.Raw.Alaw as X
+import Data.MediaBus.Conduit.Audio.Raw.DebugSink as X
+import Data.MediaBus.Conduit.Audio.Raw.Resample as X
+import Data.MediaBus.Conduit.Discontinous as X
+import Data.MediaBus.Conduit.Reorder as X
+import Data.MediaBus.Conduit.Segment as X
+import Data.MediaBus.Conduit.Stream as X
+import Data.MediaBus.Conduit.Timing as X
+import Data.MediaBus.Conduit.Trace as X
+import Data.MediaBus.Conduit.TypeAnnotations as X
 import Data.MediaBus.Media.Audio as X
 import Data.MediaBus.Media.Audio.Raw as X
 import Data.MediaBus.Media.Audio.Raw.Alaw as X
@@ -20,18 +32,8 @@ import Data.MediaBus.Media.Blank as X
 import Data.MediaBus.Media.Buffer as X
 import Data.MediaBus.Media.Channels as X
 import Data.MediaBus.Media.Discontinous as X
+import Data.MediaBus.Media.Media as X
 import Data.MediaBus.Media.Samples as X
 import Data.MediaBus.Media.Segment as X
 import Data.MediaBus.Media.Stream as X
-import Data.MediaBus.Stream as X
-import Data.MediaBus.Stream.Async as X
-import Data.MediaBus.Stream.Audio.Raw.Alaw as X
-import Data.MediaBus.Stream.Audio.Raw.DebugSink as X
-import Data.MediaBus.Stream.Audio.Raw.Resample as X
-import Data.MediaBus.Stream.Discontinous as X
-import Data.MediaBus.Stream.Reorder as X
-import Data.MediaBus.Stream.Segment as X
-import Data.MediaBus.Stream.Timing as X
-import Data.MediaBus.Stream.Trace as X
-import Data.MediaBus.Stream.TypeAnnotations as X
 import Data.MediaBus.Transport.Udp as X

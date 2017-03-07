@@ -1,4 +1,4 @@
-module Data.MediaBus.Stream.ReorderSpec ( spec ) where
+module Data.MediaBus.Conduit.ReorderSpec ( spec ) where
 
 import           Conduit
 import           Data.Conduit.List

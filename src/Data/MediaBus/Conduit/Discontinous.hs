@@ -1,5 +1,5 @@
 -- | A conduit that conceals 'Missing' frames.
-module Data.MediaBus.Stream.Discontinous
+module Data.MediaBus.Conduit.Discontinous
   ( concealMissing
   ) where
 
@@ -7,7 +7,7 @@ import Conduit
 import Control.Parallel.Strategies (NFData)
 import Data.MediaBus.Media.Discontinous
 import Data.MediaBus.Media.Stream
-import Data.MediaBus.Stream
+import Data.MediaBus.Conduit.Stream
 
 -- | Replace 'Missing' parts with the given concealment value.
 concealMissing

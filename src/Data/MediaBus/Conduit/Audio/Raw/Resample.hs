@@ -1,5 +1,5 @@
 -- | Simple, preliminary (raw-)audio resampling
-module Data.MediaBus.Stream.Audio.Raw.Resample
+module Data.MediaBus.Conduit.Audio.Raw.Resample
   ( resample8to16kHz'
   ) where
 
@@ -12,7 +12,7 @@ import Data.MediaBus.Media.Audio.Raw
 import Data.MediaBus.Media.Buffer
 import Data.MediaBus.Media.Samples
 import Data.MediaBus.Media.Stream
-import Data.MediaBus.Stream
+import Data.MediaBus.Conduit.Stream
 import Data.MediaBus.Basics.Ticks
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.Mutable as M

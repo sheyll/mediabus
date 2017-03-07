@@ -1,5 +1,5 @@
 -- | Conduits to create and convert the time stamps in 'Stream's
-module Data.MediaBus.Stream.Timing
+module Data.MediaBus.Conduit.Timing
   ( convertTicksC'
   , deriveFrameTimestamp
   ) where
@@ -10,7 +10,7 @@ import Control.Lens
 import Control.Monad.State.Strict
 import Data.MediaBus.Basics.Ticks
 import Data.MediaBus.Media.Stream
-import Data.MediaBus.Stream
+import Data.MediaBus.Conduit.Stream
 
 -- | Overwrite the timestamp of a stream of things that  have a time stamp field
 --  (i.e. 'HasTimestamp' instances)  and also a duration, such that the

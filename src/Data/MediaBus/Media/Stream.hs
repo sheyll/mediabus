@@ -26,7 +26,7 @@ import Data.Default
 import Data.MediaBus.Basics.Sequence
 import Data.MediaBus.Basics.Series
 import Data.MediaBus.Basics.Ticks
-import Data.MediaBus.Media
+import Data.MediaBus.Media.Media
 import Data.MediaBus.Media.Channels
 import GHC.Generics (Generic)
 import Test.QuickCheck

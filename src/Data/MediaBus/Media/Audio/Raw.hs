@@ -10,7 +10,7 @@ module Data.MediaBus.Media.Audio.Raw
 
 import Control.DeepSeq
 import Control.Lens
-import Data.MediaBus.Media
+import Data.MediaBus.Media.Media
 import Data.MediaBus.Media.Audio
 import Data.MediaBus.Media.Blank
 import Data.MediaBus.Media.Buffer

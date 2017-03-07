@@ -14,7 +14,7 @@ module Data.MediaBus.Media.Discontinous
 import Control.Lens
 import Control.Parallel.Strategies (NFData)
 import Data.Default
-import Data.MediaBus.Media
+import Data.MediaBus.Media.Media
 import Data.MediaBus.Media.Channels
 import Data.MediaBus.Media.Samples
 import Data.MediaBus.Basics.Ticks

@@ -1,7 +1,7 @@
 -- | Asynchronous execution of conduits. This module contains a set of functions
 -- to concurrently execute 'Stream' processing conduits and couple them using
 -- 'TBQueue's.
-module Data.MediaBus.Stream.Async
+module Data.MediaBus.Conduit.Async
   ( withAsyncPolledSource
   , FrameContentQ()
   , mkFrameContentQ
@@ -22,7 +22,7 @@ import Data.MediaBus.Basics.Clock
 import Data.MediaBus.Basics.Ticks
 import Data.MediaBus.Media.Discontinous
 import Data.MediaBus.Media.Stream
-import Data.MediaBus.Stream
+import Data.MediaBus.Conduit.Stream
 import Data.Proxy
 import Data.Time.Clock
 import Debug.Trace

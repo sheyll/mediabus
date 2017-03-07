@@ -1,5 +1,5 @@
 -- | Conduit combinators for 'Stream's
-module Data.MediaBus.Stream
+module Data.MediaBus.Conduit.Stream
   ( yieldStreamish
   , yieldStreamish'
   , yieldNextFrame

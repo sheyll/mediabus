@@ -1,4 +1,4 @@
-module Data.MediaBus.StreamSpec ( spec ) where
+module Data.MediaBus.Conduit.StreamSpec ( spec ) where
 
 import           Test.Hspec
 import           Test.QuickCheck

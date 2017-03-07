@@ -6,7 +6,7 @@ import           Control.Monad.Trans.Resource
 import           Conduit
 import           Data.Conduit.Network.UDP
 import           Data.MediaBus.Basics.Clock
-import           Data.MediaBus.Stream
+import           Data.MediaBus.Conduit.Stream
 import           Data.MediaBus.Media.Stream
 import           Data.MediaBus.Basics.SourceId
 import           Data.MediaBus.Basics.Sequence

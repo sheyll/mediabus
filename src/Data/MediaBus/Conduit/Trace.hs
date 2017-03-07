@@ -1,5 +1,5 @@
 -- | Probabilistic tracing conduits using 'Debug.Trace'
-module Data.MediaBus.Stream.Trace
+module Data.MediaBus.Conduit.Trace
     ( exitAfterC
     , traceShowC
     , traceShowSink

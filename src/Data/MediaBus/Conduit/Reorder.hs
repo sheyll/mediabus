@@ -1,5 +1,5 @@
 -- | Reorder the 'Frame's in 'Conduit' of a 'Stream'.
-module Data.MediaBus.Stream.Reorder
+module Data.MediaBus.Conduit.Reorder
     ( reorderFramesBySeqNumC
     , reorderFramesByC
     ) where

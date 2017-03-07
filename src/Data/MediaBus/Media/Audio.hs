@@ -5,7 +5,7 @@ module Data.MediaBus.Media.Audio
   ( Audio
   ) where
 
-import Data.MediaBus.Media
+import Data.MediaBus.Media.Media
 import Data.MediaBus.Media.Channels
 import Data.MediaBus.Basics.Ticks
 import Control.Lens

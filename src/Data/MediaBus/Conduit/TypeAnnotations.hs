@@ -1,6 +1,6 @@
 -- | Conduit combinators that make the type of a conduit unambiguous to the
 -- compiler via proxies.
-module Data.MediaBus.Stream.TypeAnnotations
+module Data.MediaBus.Conduit.TypeAnnotations
   ( annotateTypeC
   , annotateTypeCIn
   , annotateTypeCOut

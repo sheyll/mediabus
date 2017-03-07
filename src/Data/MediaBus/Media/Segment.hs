@@ -9,7 +9,7 @@ module Data.MediaBus.Media.Segment
     ) where
 
 import           Data.MediaBus.Basics.Ticks
-import           Data.MediaBus.Media
+import           Data.MediaBus.Media.Media
 import           Data.MediaBus.Media.Channels
 import           Data.MediaBus.Media.Samples
 import           Control.Lens
