@@ -1,5 +1,5 @@
 name:                mediabus
-version:             0.3.0.1
+version:             0.3.1.0
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/lindenbaum/mediabus
@@ -106,6 +106,7 @@ library
                      , lens
                      , lifted-async
                      , monad-control
+                     , monad-logger
                      , mtl
                      , network
                      , parallel

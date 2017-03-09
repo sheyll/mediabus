@@ -44,7 +44,9 @@ class HasMediaBuffer s t where
 type HasMediaBuffer' s = (HasMediaBuffer s s, MediaBufferFrom s ~ MediaBufferTo s)
 
 -- | Like 'mediaBuffer' but with @s ~ t@ and @MediaBufferFrom s ~ MediaBufferTo t@
-mediaBuffer' :: HasMediaBuffer' s => Lens' s (MediaBufferFrom s)
+mediaBuffer'
+  :: HasMediaBuffer' s
+  => Lens' s (MediaBufferFrom s)
 mediaBuffer' = mediaBuffer
 
 -- | Like 'HasMediaBuffer' but with the typical lens type parameters @s t a b@
@@ -75,11 +77,13 @@ instance CanBeSample s =>
   fromList = mediaBufferFromList
   toList = mediaBufferToList
 
-instance (CanBeSample a) =>
+instance (Show a, CanBeSample a) =>
          Show (MediaBuffer a) where
-  show m =
-    "MediaBuffer: " ++
-    show (mediaBufferLength m) ++ " x " ++ show (typeRep (Proxy :: Proxy a))
+  showsPrec d m =
+    showParen (d > 10) $
+    showString "media buffer: " .
+    showsPrec 8 (mediaBufferLength m) .
+    showString " * " . showsPrec 8 (typeRep (Proxy :: Proxy a))
 
 instance CanBeSample sampleType =>
          Default (MediaBuffer sampleType) where
@@ -93,7 +97,6 @@ mediaBufferLength = view (mediaBufferVector . to V.length)
 
 -- ** Conversion
 -- *** List Conversion
-
 -- | Convert the media buffer vector contents to a list in O(n).
 mediaBufferToList
   :: CanBeSample s
@@ -107,7 +110,6 @@ mediaBufferFromList
 mediaBufferFromList = MkMediaBuffer . V.fromList
 
 -- *** 'ByteString' Conversion
-
 -- | An efficient conversion of a 'ByteString' to a 'MediaBuffer'
 mediaBufferFromByteString
   :: CanBeSample a

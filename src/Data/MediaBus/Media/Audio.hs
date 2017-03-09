@@ -10,8 +10,8 @@ import Data.MediaBus.Media.Channels
 import Data.MediaBus.Basics.Ticks
 import Control.Lens
 
--- | Family of audio media types, indexed by the sampleRate, the channel layout
---   and a /codec/ parameter. This class is intended as a basis for all audio
+-- | Family of audio media types, indexed by a sampleRate, a channel layout
+--   and a /codec/ parameter. This type family is intended as a basis for all audio
 --   media, raw as well as encoded audio.
 data family Audio (sampleRate :: Rate) channelLayout encoding
 

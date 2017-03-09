@@ -53,8 +53,7 @@ instance (HasRate i, GetRate i ~ ri, SetRate i rj ~ j, KnownRate rj, CoerceRate 
 
 instance (HasStaticDuration d, Show c) =>
          Show (Segment d c) where
-    showsPrec d (MkSegment c) =
-      showParen (d > 10) $
+    showsPrec _d (MkSegment c) =
           showString "[| "
           . shows c
           . showString (printf " |%10s]" (show (getStaticDuration (Proxy :: Proxy d))))

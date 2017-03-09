@@ -4,26 +4,26 @@
 -- 'SourceId' is that every thing that has a certain source id stems from **the
 -- same media source**, e.g. the same microphone, audio file, synthesizer,...
 module Data.MediaBus.Basics.SourceId
-    ( SourceId(..)
-    , sourceIdValue
-    , type SrcId32
-    , type SrcId64
-    , HasSourceId(..)
-    , EachSourceId(..)
-    ) where
+  ( SourceId(..)
+  , sourceIdValue
+  , type SrcId32
+  , type SrcId64
+  , HasSourceId(..)
+  , EachSourceId(..)
+  ) where
 
-import           Control.Lens
-import           Test.QuickCheck
-import           Data.Default
-import           GHC.Generics    ( Generic )
-import           Control.DeepSeq
-import           Data.Word
+import Control.DeepSeq
+import Control.Lens
+import Data.Default
+import Data.Word
+import GHC.Generics (Generic)
+import Test.QuickCheck
 
 -- | Things that can be uniquely identified by a looking at a (much simpler)
 -- representation, the 'identity'.
-newtype SourceId i = MkSourceId { _sourceIdValue :: i }
-    deriving (Eq, Arbitrary, Default, Ord, Generic)
-
+newtype SourceId i = MkSourceId
+  { _sourceIdValue :: i
+  } deriving (Eq, Arbitrary, Default, Ord, Generic)
 
 -- | An 'Iso' for the value of a 'SourceId'
 sourceIdValue :: Iso (SourceId a) (SourceId b) a b
@@ -40,19 +40,20 @@ instance (NFData i) =>
 
 instance Show i =>
          Show (SourceId i) where
-    show (MkSourceId x) = "SOURCE-ID: " ++ show x
+  showsPrec d (MkSourceId x) =
+    showParen (d > 10) $ showString "source-id: " . showsPrec 11 x
 
 -- | Type class for a lens over the contained source id
 class HasSourceId s t where
-    type SourceIdFrom s
-    type SourceIdTo t
-    -- | A lens for the 'SourceId'
-    sourceId :: Lens s t (SourceIdFrom s) (SourceIdTo t)
+  type SourceIdFrom s
+  type SourceIdTo t
+  -- | A lens for the 'SourceId'
+  sourceId :: Lens s t (SourceIdFrom s) (SourceIdTo t)
 
 -- | Type class with a 'Traversal' for types that may or may not contain anctual
 -- source id.
 class EachSourceId s t where
-    type SourceIdsFrom s
-    type SourceIdsTo t
-    -- | A 'Traversal' for the 'SourceId'
-    eachSourceId :: Traversal s t (SourceIdsFrom s) (SourceIdsTo t)
+  type SourceIdsFrom s
+  type SourceIdsTo t
+  -- | A 'Traversal' for the 'SourceId'
+  eachSourceId :: Traversal s t (SourceIdsFrom s) (SourceIdsTo t)

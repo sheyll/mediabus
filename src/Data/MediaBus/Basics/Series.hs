@@ -34,8 +34,9 @@ instance (NFData a, NFData b) =>
 instance (Show a, Show b) =>
          Show (Series a b) where
   showsPrec d (Start !x) =
-    showParen (d > 10) $ showString "START: " . showsPrec 11 x
-  showsPrec d (Next !x) = showsPrec d x
+    showParen (d > 10) $ showString "start: " . showsPrec 11 x
+  showsPrec d (Next !x) =
+    showParen (d > 10) $ showString "next: " . showsPrec 11 x
 
 instance (Ord a, Ord b) =>
          Ord (Series a b) where

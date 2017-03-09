@@ -26,11 +26,10 @@ import Data.Default
 import Data.MediaBus.Basics.Sequence
 import Data.MediaBus.Basics.Series
 import Data.MediaBus.Basics.Ticks
-import Data.MediaBus.Media.Media
 import Data.MediaBus.Media.Channels
+import Data.MediaBus.Media.Media
 import GHC.Generics (Generic)
 import Test.QuickCheck
-import Text.Printf
 
 -- | Meta information about a media stream.
 data FrameCtx i s t p = MkFrameCtx
@@ -81,13 +80,13 @@ instance (Default i, Default s, Default t, Default p) =>
 
 instance (Show i, Show s, Show t, Show p) =>
          Show (FrameCtx i s t p) where
-  show (MkFrameCtx sid tsr snr spr) =
-    printf
-      "FRAME-CTX: %15s | %15s | %15s | %s"
-      (show sid)
-      (show snr)
-      (show tsr)
-      (show spr)
+  showsPrec d (MkFrameCtx sid tsr snr spr) =
+    showParen (d > 10) $
+    showString "frame context: " .
+    showsPrec 11 sid .
+    showChar ' ' .
+    showsPrec 11 snr .
+    showChar ' ' . showsPrec 11 tsr . showChar ' ' . showsPrec 11 spr
 
 -- | A 'Frame' can be anything that has a start time and is exactly one time
 -- unit long, it can respresent anything ranging from an audio buffer with 20ms
@@ -157,8 +156,11 @@ instance (Default s, Default t, Default c) =>
 
 instance (Show s, Show t, Show v) =>
          Show (Frame s t v) where
-  show (MkFrame ts sn v) =
-    printf "FRAME: %15s | %15s | %s" (show sn) (show ts) (show v)
+  showsPrec d (MkFrame ts sn v) =
+    showParen (d > 10) $
+    showString "frame: " .
+    showsPrec 11 sn .
+    showChar ' ' . showsPrec 11 ts . showChar ' ' . showsPrec 11 v
 
 -- | A type for values that belong to a 'Series' of 'Frame's started by a
 -- 'FrameCtx'. This combines the sum type 'Series' which has either 'Start' or
@@ -207,4 +209,4 @@ instance (Default c, Default s, Default t) =>
 
 instance (Show i, Show s, Show t, Show c, Show p) =>
          Show (Stream i s t p c) where
-  show (MkStream s) = show s
+  showsPrec d (MkStream s) = showsPrec d s

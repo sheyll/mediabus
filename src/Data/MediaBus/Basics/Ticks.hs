@@ -122,8 +122,7 @@ class (KnownRate (GetRate i), SetRate i (GetRate i) ~ i) =>
 -- | Types which contain a rate, but are agnostic of it. The counter example would be
 -- if the rate was a type index of a data family.
 class (HasRate i, GetRate i ~ ri, SetRate i rj ~ j, KnownRate rj) =>
-      CoerceRate i j ri rj
-    where
+      CoerceRate i j ri rj where
   -- | Change the static sample rate, without e.g. resampling
   coerceRate :: proxy rj -> i -> SetRate i rj
 
@@ -283,10 +282,11 @@ nominalDiffTime = iso (toNDT . _ticks) (MkTicks . fromNDT)
 
 instance (CanBeTicks r w, Show w) =>
          Show (Ticks r w) where
-  show tix@(MkTicks x) =
+  showsPrec d (MkTicks x) =
+    showParen (d > 7) $
+    showString $
     printf
-      "%10s (%10d @ %10d Hz)"
-      (show (view nominalDiffTime tix))
+      "%8d / %dHz"
       (toInteger x)
       (rateVal (Proxy :: Proxy r))
 
@@ -400,7 +400,6 @@ ticksFromStaticDuration
   => proxy (ticks :/ rate) -> Ticks rate i
 ticksFromStaticDuration _ =
   MkTicks (fromIntegral (natVal (Proxy :: Proxy ticks)))
-
 
 instance (HasTimestamp a, HasTimestamp b, GetTimestamp a ~ GetTimestamp b) =>
          HasTimestamp (Series a b) where

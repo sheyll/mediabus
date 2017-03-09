@@ -35,6 +35,13 @@ instance EachChannel (Pcm Stereo a) (Pcm Stereo b) where
   type ChannelsTo (Pcm Stereo b) = b
   eachChannel f (MkStereo !l !r) = MkStereo <$> f l <*> f r
 
+instance Show a =>
+         Show (Pcm Stereo a) where
+  showsPrec d (MkStereo l r) =
+    showParen
+      (d > 10)
+      (showChar 'L' . showsPrec 11 l . showString " R" . showsPrec 11 r)
+
 instance IsPcmValue a =>
          IsPcmValue (Pcm Stereo a) where
   pcmAverage (MkStereo !l0 !r0) (MkStereo !l1 !r1) =
@@ -50,7 +57,7 @@ instance Default a =>
 
 instance Storable s =>
          Storable (Pcm Stereo s) where
-  sizeOf s = 2 * sizeOf s
+  sizeOf _ = 2 * sizeOf (undefined :: s)
   alignment = alignment
   peekByteOff ptr off = do
     l <- peekByteOff ptr off

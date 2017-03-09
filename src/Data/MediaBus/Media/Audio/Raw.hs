@@ -81,7 +81,7 @@ instance (Typeable t, KnownRate r, KnownChannelLayout c) =>
        showsPrec 11 (MkRateProxy :: RateProxy r) .
        showString " " . showsPrec 11 (MkRateProxy :: RateProxy r))
 
-instance (Typeable t, KnownRate r, KnownChannelLayout c, CanBeSample (Pcm c t)) =>
+instance (Typeable t, KnownRate r, KnownChannelLayout c, CanBeSample (Pcm c t), Show (Pcm c t)) =>
          Show (Audio r c (Raw t)) where
   showsPrec d (MkPcm !c) =
     showParen (d > 10) $

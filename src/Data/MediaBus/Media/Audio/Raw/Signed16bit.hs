@@ -35,7 +35,7 @@ s16Sample :: Iso' S16 Int16
 s16Sample = iso _s16Sample MkS16
 
 instance Show S16 where
-  show (MkS16 !x) = printf "S16: %6d" x
+  showsPrec d (MkS16 !x) = showParen (d > 10) $ showString (printf "S16: %6d" x)
 
 instance CanBeBlank S16 where
   blank = 0

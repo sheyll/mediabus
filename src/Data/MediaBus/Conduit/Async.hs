@@ -15,19 +15,20 @@ import Control.Concurrent.Async.Lifted
 import Control.Concurrent.STM
 import Control.Exception (evaluate)
 import Control.Lens
+import Control.Monad.Logger
 import Control.Monad.State
 import Control.Parallel.Strategies (NFData, rdeepseq, withStrategy)
 import Data.Default
 import Data.MediaBus.Basics.Clock
 import Data.MediaBus.Basics.Ticks
+import Data.MediaBus.Conduit.Stream
 import Data.MediaBus.Media.Discontinous
 import Data.MediaBus.Media.Stream
-import Data.MediaBus.Conduit.Stream
 import Data.Proxy
 import Data.Time.Clock
-import Debug.Trace
 import System.Random
 import Text.Printf
+import Data.String
 
 data PollFrameContentSourceSt s t = MkPollFrameContentSourceSt
   { _ppSeqNum :: !s
@@ -41,6 +42,7 @@ makeLenses ''PollFrameContentSourceSt
 -- generating a 'Discontinous' output.
 withAsyncPolledSource
   :: ( MonadResource m
+     , MonadLogger m
      , MonadBaseControl IO m
      , KnownRate r
      , Integral t
@@ -91,7 +93,7 @@ mkFrameContentQ qlen =
 -- 'FrameContentQ'. When the queue is full, **drop the oldest element** and push
 -- in the new element, anyway.
 frameContentQSink
-  :: (NFData a, MonadBaseControl IO m, Show a)
+  :: (NFData a, MonadBaseControl IO m, Show a, MonadLogger m)
   => FrameContentQ a -> Sink (Stream i s t p a) m ()
 frameContentQSink (MkFrameContentQ _ _ !ringRef) = awaitForever go
   where
@@ -99,13 +101,16 @@ frameContentQSink (MkFrameContentQ _ _ !ringRef) = awaitForever go
       maybe (return ()) pushInRing (x ^? eachFrameContent)
       return ()
       where
-        pushInRing !buf' =
-          liftBase $ do
-            !buf <- evaluate $ withStrategy rdeepseq buf'
-            atomically $ do
-              isFull <- isFullTBQueue ringRef
-              when isFull (void $ readTBQueue ringRef)
-              writeTBQueue ringRef buf
+        pushInRing !buf' = do
+          isFull <-
+            liftBase $ do
+              !buf <- evaluate $ withStrategy rdeepseq buf'
+              atomically $ do
+                isFull <- isFullTBQueue ringRef
+                when isFull (void $ readTBQueue ringRef)
+                writeTBQueue ringRef buf
+                return isFull
+          when isFull $ $logInfo "queue full"
 
 -- | Periodically poll a 'FrameContentQ' and yield the content as frames with
 -- newly generated timestamp and sequence number values.
@@ -117,6 +122,7 @@ frameContentQSource
      , HasStaticDuration c
      , HasDuration c
      , MonadBaseControl IO m
+     , MonadLogger m
      , KnownRate r
      , Integral t
      , Integral s
@@ -141,7 +147,9 @@ frameContentQSource (MkFrameContentQ pTime pollIntervall ringRef) =
             !t1 <- now
             return (diffTime t1 t0 ^. utcClockTimeDiff))
     yieldMissing !dt !wasMissing = do
-      unless wasMissing (traceM (printf "*** UNDERFLOW: Missing %s" (show dt))) -- TODO replace by proper logging
+      unless
+        wasMissing
+        ($logDebug (fromString (printf "underflow: %s" (show dt))))
       replicateM_ (floor (dt / pTime)) (yieldNextBuffer Missing)
     yieldStart =
       (MkFrameCtx <$> liftBase randomIO <*> use ppTicks <*> use ppSeqNum <*>
