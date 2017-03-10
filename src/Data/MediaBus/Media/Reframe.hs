@@ -14,10 +14,14 @@ module Data.MediaBus.Media.Reframe
   , generateFrame
   , type ReframerT
   , ReframerSt()
+  , ReframeError(..)
+  , mkReFrameError
   ) where
 
+import Control.Exception
 import Control.Monad.Trans.State.Strict as State
 import Data.MediaBus.Media.Stream
+import Data.Typeable
 
 -- | Create an empty initial state.
 initialReframerState
@@ -81,7 +85,24 @@ data ReframerSt s d = MkTimeFrame
   { _startTs :: !d
   , _nextSeqNum :: !s
   , _endTs :: !d
-  } deriving (Show)
+  } deriving (Show, Typeable)
 
 -- | The 'ReframerSt' 'StateT' transformer
 type ReframerT m s d a = StateT (ReframerSt s d) m a
+
+-- | The exception type for 'encodeLinearToAacC'
+data ReframeError s d = MkReframeError
+  { reframeError :: String
+  , reframeErrorRequestedOutput :: Maybe d
+  , reframeErrorSt :: ReframerSt s d
+  } deriving (Show, Typeable)
+
+instance (Show s, Typeable s, Show d, Typeable d) =>
+         Exception (ReframeError s d)
+
+-- | Utility function to generate a 'ReframeError' with the current state.
+mkReFrameError
+  :: Monad m
+  => String -> Maybe d -> ReframerT m s d (ReframeError s d)
+mkReFrameError msg requestedOutputDuration =
+  MkReframeError msg requestedOutputDuration <$> State.get
