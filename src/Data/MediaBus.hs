@@ -5,12 +5,14 @@ module Data.MediaBus
   ) where
 
 import Data.MediaBus.Basics.Clock as X
+import Data.MediaBus.Basics.LoggingExtra as X
 import Data.MediaBus.Basics.Monotone as X
 import Data.MediaBus.Basics.OrderedBy as X
 import Data.MediaBus.Basics.Sequence as X
 import Data.MediaBus.Basics.Series as X
 import Data.MediaBus.Basics.SourceId as X
 import Data.MediaBus.Basics.Ticks as X
+import Data.MediaBus.Basics.VectorExtra as X
 import Data.MediaBus.Conduit.Async as X
 import Data.MediaBus.Conduit.Audio.Raw.Alaw as X
 import Data.MediaBus.Conduit.Audio.Raw.DebugSink as X
@@ -33,6 +35,7 @@ import Data.MediaBus.Media.Buffer as X
 import Data.MediaBus.Media.Channels as X
 import Data.MediaBus.Media.Discontinous as X
 import Data.MediaBus.Media.Media as X
+import Data.MediaBus.Media.Reframe as X
 import Data.MediaBus.Media.Samples as X
 import Data.MediaBus.Media.Segment as X
 import Data.MediaBus.Media.Stream as X

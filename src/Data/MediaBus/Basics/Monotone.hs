@@ -1,9 +1,9 @@
 module Data.MediaBus.Basics.Monotone
-    ( LocalOrd(..)
-    ) where
+  ( LocalOrd(..)
+  ) where
 
-import           Data.Word
-import           Data.Int
+import Data.Int
+import Data.Word
 
 -- | Class of numbers that are monotone increasing having only a relative order,
 -- that is not necessarily transitive.
@@ -14,24 +14,39 @@ import           Data.Int
 -- express that @0@ `succeeds` @192@, since 'Ord' ensures complete transitivity
 -- and therefore @0 < 192@.
 class LocalOrd a where
-    succeeds :: a -> a -> Bool
-    default succeeds :: (Bounded a, Integral a) => a -> a -> Bool
-    x `succeeds` y = (x - y) < ((maxBound - minBound) `div` 2)
+  succeeds :: a -> a -> Bool
 
-instance LocalOrd Word8
+instance LocalOrd Word8 where
+  x `succeeds` y =
+    let d = x - y
+    in d > 0 && d <= ((maxBound - minBound) `div` 2)
 
-instance LocalOrd Word16
+instance LocalOrd Word16 where
+  x `succeeds` y =
+    let d = x - y
+    in d > 0 && d <= ((maxBound - minBound) `div` 2)
 
-instance LocalOrd Word32
+instance LocalOrd Word32 where
+  x `succeeds` y =
+    let d = x - y
+    in d > 0 && d <= ((maxBound - minBound) `div` 2)
 
-instance LocalOrd Word64
+instance LocalOrd Word64 where
+  x `succeeds` y =
+    let d = x - y
+    in d > 0 && d <= ((maxBound - minBound) `div` 2)
 
-instance LocalOrd Int8
+instance LocalOrd Int8 where
+  x `succeeds` y = x - y > 0
 
-instance LocalOrd Int16
+instance LocalOrd Int16 where
+  x `succeeds` y = x - y > 0
 
-instance LocalOrd Int32
+instance LocalOrd Int32 where
+  x `succeeds` y = x - y > 0
 
-instance LocalOrd Int64
+instance LocalOrd Int64 where
+  x `succeeds` y = x - y > 0
 
-instance LocalOrd Int
+instance LocalOrd Int where
+  x `succeeds` y = x - y > 0

@@ -1,5 +1,5 @@
 name:                mediabus
-version:             0.3.1.0
+version:             0.3.2.0
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/lindenbaum/mediabus
@@ -18,12 +18,14 @@ library
   exposed-modules:
                        Data.MediaBus
                      , Data.MediaBus.Basics.Clock
+                     , Data.MediaBus.Basics.LoggingExtra
                      , Data.MediaBus.Basics.Monotone
                      , Data.MediaBus.Basics.OrderedBy
                      , Data.MediaBus.Basics.Sequence
                      , Data.MediaBus.Basics.Series
                      , Data.MediaBus.Basics.SourceId
                      , Data.MediaBus.Basics.Ticks
+                     , Data.MediaBus.Basics.VectorExtra
                      , Data.MediaBus.Conduit.Async
                      , Data.MediaBus.Conduit.Audio.Raw.Alaw
                      , Data.MediaBus.Conduit.Audio.Raw.DebugSink
@@ -46,6 +48,7 @@ library
                      , Data.MediaBus.Media.Channels
                      , Data.MediaBus.Media.Discontinous
                      , Data.MediaBus.Media.Media
+                     , Data.MediaBus.Media.Reframe
                      , Data.MediaBus.Media.Samples
                      , Data.MediaBus.Media.Segment
                      , Data.MediaBus.Media.Stream
