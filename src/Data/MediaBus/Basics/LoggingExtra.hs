@@ -5,6 +5,7 @@ module Data.MediaBus.Basics.LoggingExtra
 
 import Control.Monad.Logger
 
+
 -- | Prefix every log message done from inside the given monad action with the
 -- given prefix. This runs a 'LoggingT' action inside a 'MonadLoggerIO' base
 -- monad with a log function that wraps around the log function returned by

@@ -4,3 +4,5 @@
 * Add utility module `VectorExtra`
 * Add logging utility modules to prefix all log messages done in nested
   `Conduit`s and `MonadLoggerIO` monads    
+
+# 0.3.0.2 - Beginning of Changelog
