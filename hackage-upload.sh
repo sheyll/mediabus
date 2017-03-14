@@ -2,4 +2,4 @@
 
 set -xe
 
-stack upload --pvp-bounds both .
+stack upload --pvp-bounds upper .

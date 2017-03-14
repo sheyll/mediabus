@@ -1,5 +1,5 @@
 name:                mediabus
-version:             0.3.2.0
+version:             0.3.2.1
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/lindenbaum/mediabus
@@ -125,7 +125,7 @@ library
                      , text
                      , time
                      , transformers
-                     , vector
+                     , vector < 13
 
 test-suite tests
   type:                exitcode-stdio-1.0
@@ -164,7 +164,7 @@ test-suite tests
                      , time
                      , transformers
                      , type-spec
-                     , vector
+                     , vector < 13
   default-language:    Haskell2010
   default-extensions:  ApplicativeDo
                      , Arrows
