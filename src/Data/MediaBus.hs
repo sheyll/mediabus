@@ -36,8 +36,8 @@ import Data.MediaBus.Media.Buffer as X
 import Data.MediaBus.Media.Channels as X
 import Data.MediaBus.Media.Discontinous as X
 import Data.MediaBus.Media.Media as X
-import Data.MediaBus.Media.Reframe as X
 import Data.MediaBus.Media.Samples as X
 import Data.MediaBus.Media.Segment as X
 import Data.MediaBus.Media.Stream as X
+import Data.MediaBus.Media.SyncStream as X
 import Data.MediaBus.Transport.Udp as X
