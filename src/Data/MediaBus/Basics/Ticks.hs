@@ -44,6 +44,8 @@ module Data.MediaBus.Basics.Ticks
   , type StaticTicksTicks
   , HasDuration(..)
   , HasTimestamp(..)
+  , setTimestampFromDurations
+  , removeTimestamp
   , HasStaticDuration(..)
   , getStaticDurationTicks
   , getStaticDuration
@@ -349,6 +351,33 @@ class SetTimestamp t (GetTimestamp t) ~ t =>
   timestamp :: Lens t (SetTimestamp t s) (GetTimestamp t) s
   timestamp' :: Lens' t (GetTimestamp t)
   timestamp' = timestamp
+
+-- | Calculate and set a timestamp.
+--
+-- The timestamp of each element is calculated from the sum of the durations of
+-- the previous elements stored and the start time stamp @t0@.
+--
+-- The input elements must be instances of 'HasTimestamp' but with the important
+-- condition, that the input timestamp is always /unit/ i.e. @()@.
+-- This prevents /meaningful/ timestamps from being overwritten.
+--
+-- Use 'removeTimestamp' to explicitly remove a timestamp.
+setTimestampFromDurations
+  :: forall r t a.
+     ( CanBeTicks r t
+     , HasDuration a
+     , HasTimestamp a
+     , GetTimestamp a ~ ()
+     )
+  => a -> Ticks r t -> (SetTimestamp a (Ticks r t), Ticks r t)
+setTimestampFromDurations !sb !t =
+   (sb & timestamp .~ t, t + (nominalDiffTime # getDuration sb))
+
+-- | Explicitly remove a timestamp, by setting the timestamp to @()@.
+removeTimestamp
+  :: (HasTimestamp a)
+  => a -> (SetTimestamp a ())
+removeTimestamp = timestamp .~ ()
 
 -- ** Known at compile time durations
 -- *** Static ticks TODO rename static -> known

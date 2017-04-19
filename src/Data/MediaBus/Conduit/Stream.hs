@@ -11,8 +11,8 @@ module Data.MediaBus.Conduit.Stream
   , mapFramesC
   , mapFramesC'
   , mapSeqNumC
-  , mapTicksC
-  , mapTicksC'
+  , mapTimestampC
+  , mapTimestampC'
   , mapFrameContentMC
   , mapFrameContentMC'
   , mapFrameContentC'
@@ -117,16 +117,16 @@ mapSeqNumC = mapC . over seqNum
 
 -- | A conduit that applies the given function to every time stamp of a
 -- 'Stream', in 'Frame's as well as 'FrameCtx's.
-mapTicksC
+mapTimestampC
   :: Monad m
   => (t -> t') -> Conduit (Stream i s t p c) m (Stream i s t' p c)
-mapTicksC = mapC . over timestamp
+mapTimestampC = mapC . over timestamp
 
--- | A strict version of 'mapTicksC'.
-mapTicksC'
+-- | A strict version of 'mapTimestampC'.
+mapTimestampC'
   :: (NFData t, Monad m)
   => (t -> t') -> Conduit (Stream i s t p c) m (Stream i s t' p c)
-mapTicksC' = mapC . withStrategy rdeepseq . over timestamp
+mapTimestampC' = mapC . withStrategy rdeepseq . over timestamp
 
 -- | A conduit that applies the given pure function to 'eachFrameContent' of a 'Stream'.
 mapFrameContentC'

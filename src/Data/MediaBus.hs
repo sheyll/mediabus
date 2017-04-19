@@ -22,7 +22,7 @@ import Data.MediaBus.Conduit.Logging as X
 import Data.MediaBus.Conduit.Reorder as X
 import Data.MediaBus.Conduit.Segment as X
 import Data.MediaBus.Conduit.Stream as X
-import Data.MediaBus.Conduit.Timing as X
+import Data.MediaBus.Conduit.SyncStream as X
 import Data.MediaBus.Conduit.Trace as X
 import Data.MediaBus.Conduit.TypeAnnotations as X
 import Data.MediaBus.Media.Audio as X

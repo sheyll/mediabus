@@ -51,7 +51,7 @@ singleFrameFromList x =
   mapOutput
     (MkStream . Next)
     (mapOutput (MkFrame () def) (yield (pcmMediaBuffer # mediaBufferFromList x)) .|
-     deriveFrameTimestamp 0)
+     setTimestampFromDurationsC 0)
 
 framesFromLists
   :: Monad m
@@ -61,4 +61,4 @@ framesFromLists xs =
   mapOutput
     (MkStream . Next)
     (mapOutput (MkFrame () def) (mapM_ (yield . view (from pcmMediaBuffer) . mediaBufferFromList) xs) .|
-     deriveFrameTimestamp 0)
+     setTimestampFromDurationsC 0)

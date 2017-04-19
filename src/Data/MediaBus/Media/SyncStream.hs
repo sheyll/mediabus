@@ -1,20 +1,30 @@
--- | Naturally ordered 'Stream's.
--- A 'Stream' without sequence numbers and timestamps has no means to represent
--- 'Frame's that have varying sequence numbers or timestamps, hence they cannot
--- be part of a stream that is not perfectly synchronized, therefore when consuming
--- such 'Stream' values, the corresponding callers must work under the assumption
--- that the frames are perfectly synchronous.
+-- | A module for removing and creating sequence numbers and time stamps for
+-- 'Stream's.
+--
+-- It's sometimes helpful to explicity use a 'SyncStream' instead of a 'Stream'.
+--
+-- For example, for a library function that consumes 'Frame's and doesn't regard
+-- the sequence numbers and time stamps, such that the function does not handle
+-- any gaps and/or out of order packages or discrepancies in the time stamps
+-- and frame durations.
+--
+-- When the library author chooses 'SyncStream', the library users then know,
+-- that the library function relies on a synchronized stream.
 module Data.MediaBus.Media.SyncStream
   ( type SyncStream
   , assumeSynchronized
-  , setSequenceNumbersAndTimestamps
+  , setSequenceNumberAndTimestamp
   ) where
 
 import Data.MediaBus.Basics.Series
 import Data.MediaBus.Basics.Ticks
 import Data.MediaBus.Media.Stream
 
--- | A 'Stream' without a meaningful sequence number or timestamp.
+-- | A 'Stream' without sequence numbers and time stamps is called a
+-- 'SyncStream', which is the abbreviation of /synchronous stream/, because
+-- when the sequence numbers and time stamps of a 'Stream', and by extension of
+-- a 'Frame' and 'FrameCtx', are always @()@, the 'Frame's of a 'Stream' can
+-- be assumed to be (perfectly) synchronous.
 type SyncStream i p c = Stream i () () p c
 
 -- | Convert a 'Stream' to a 'SyncStream' by simply /forgetting/ the sequence
@@ -31,14 +41,14 @@ assumeSynchronized (MkStream (Next (MkFrame _ _ c))) =
 -- Increment the sequence numbers starting from @0@ for every frame.
 -- Start the timestamp at @0@ and add the 'Frame' duration of the 'Next'
 -- frame in the stream.
--- This function has the signature required to turn it into a 'State' monad
-setSequenceNumbersAndTimestamps
+-- This function has the signature required to turn it into a 'State' monad.
+setSequenceNumberAndTimestamp
   :: (Num s, CanBeTicks r t, HasDuration c)
   => SyncStream i p c
   -> (s, Ticks r t)
   -> (Stream i s (Ticks r t) p c, (s, Ticks r t))
-setSequenceNumbersAndTimestamps (MkStream (Next (MkFrame _t _s !c))) (nextS, nextT) =
+setSequenceNumberAndTimestamp (MkStream (Next (MkFrame _t _s !c))) (nextS, nextT) =
   ( MkStream (Next (MkFrame nextT nextS c))
   , (nextS + 1, nextT + getDurationTicks c))
-setSequenceNumbersAndTimestamps (MkStream (Start (MkFrameCtx i _t _s p))) (nextS, nextT) =
+setSequenceNumberAndTimestamp (MkStream (Start (MkFrameCtx i _t _s p))) (nextS, nextT) =
   ((MkStream (Start (MkFrameCtx i nextT nextS p))), (nextS, nextT))

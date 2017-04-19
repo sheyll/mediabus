@@ -1,4 +1,4 @@
-resolver: lts-8.2
+resolver: lts-8.6
 
 packages:
 - '.'
@@ -9,5 +9,5 @@ flags: {}
 
 extra-package-dbs: []
 
-build:
-  test: true
+install-ghc: true
+pvp-bounds: upper

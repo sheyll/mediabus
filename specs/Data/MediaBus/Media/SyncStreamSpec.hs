@@ -19,7 +19,7 @@ instance HasDuration FakePayload where
 
 spec :: Spec
 spec =
-  describe "setSequenceNumbersAndTimestamps" $ do
+  describe "setSequenceNumberAndTimestamp" $ do
     it "increases the sequence number by one (only) for each frame" $
       let prop :: (NonEmptyList (SyncStream () () FakePayload)) -> Bool
           prop (NonEmpty inStr) =
@@ -33,7 +33,7 @@ spec =
                             z = (0, 0)
                         in evalState
                              (mapM
-                                (state . setSequenceNumbersAndTimestamps)
+                                (state . setSequenceNumberAndTimestamp)
                                 inStr)
                              z
                   in case last outStr of
@@ -53,7 +53,7 @@ spec =
                                   z = (0, 0)
                               in evalState
                                    (mapM
-                                      (state . setSequenceNumbersAndTimestamps)
+                                      (state . setSequenceNumberAndTimestamp)
                                       inStr)
                                    z
                         in filter isNext outStr
@@ -72,7 +72,7 @@ spec =
                             z = (0, MkTicks 0)
                         in evalState
                              (mapM
-                                (state . setSequenceNumbersAndTimestamps)
+                                (state . setSequenceNumberAndTimestamp)
                                 inStr)
                              z
                   in filter isNext outStr

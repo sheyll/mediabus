@@ -55,8 +55,7 @@ type HasMediaBufferL s t a b = (HasMediaBuffer s t, MediaBufferFrom s ~ a, Media
 -- | Like 'HasMediaBufferL' but with the typical **simple** lens type parameters @s a@
 type HasMediaBufferL' s a = (HasMediaBuffer s s, MediaBufferFrom s ~ a, MediaBufferTo s ~ a)
 
--- | A buffer for media data. The type parameter @t@ is supposed to be an
--- instance of `IsMedia`.
+-- | A buffer for media data. This is just a newtype wrapper around 'V.Vector'.
 newtype MediaBuffer t = MkMediaBuffer
   { _mediaBufferVector :: V.Vector t
   } deriving (Generic, NFData, Monoid, Eq)

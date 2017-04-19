@@ -26,8 +26,10 @@ import Test.QuickCheck
 -- | An indicator for uncompressed audio with a given per sample encoding type.
 data Raw encoding
 
--- | A family of multi-channel audio samples, this will be stored in a 'MediaBuffer'
--- if audio is represented by @Audio r (Pcm c t)@
+-- | A family of multi-channel audio sample value types. Values of this type are
+--   stored in 'MediaBuffer's.
+--   The 'Audio' instances with 'Raw' encodings use 'MediaBuffer's of 'Pcm'
+--   values to store (multi-channel-) samples.
 data family Pcm c t
 
 -- | Types of per channel PCM audio sample value.
