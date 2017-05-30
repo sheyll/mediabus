@@ -2,7 +2,7 @@ name:                mediabus
 version:             0.4.0.0
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
-homepage:            https://github.com/lindenbaum/mediabus
+homepage:            https://github.com/sheyll/mediabus
 license:             BSD3
 license-file:        LICENSE
 author:              Sven Heyll
