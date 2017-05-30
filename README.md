@@ -1,6 +1,6 @@
 # Multimedia streaming on top of Conduit
 
-[![Build Status](https://travis-ci.org/lindenbaum/mediabus.svg?branch=master)](https://travis-ci.org/lindenbaum/mediabus)
+[![Build Status](https://travis-ci.org/sheyll/mediabus.svg?branch=master)](https://travis-ci.org/sheyll/mediabus)
 [![Hackage](https://img.shields.io/hackage/v/mediabus.svg)](http://hackage.haskell.org/package/mediabus)
 
 Functions and types for multimedia streaming on top of conduit.
