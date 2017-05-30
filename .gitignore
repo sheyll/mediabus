@@ -13,3 +13,9 @@ TAGS
 /*.html
 .vscode/
 /dist/
+/.ideaHaskellLib/
+/.vscode/
+/dist/
+/dist-newstyle/
+/cabal.config
+*.iml
