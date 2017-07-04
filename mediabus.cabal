@@ -1,5 +1,5 @@
 name:                mediabus
-version:             0.4.0.0
+version:             0.4.0.1
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/sheyll/mediabus
@@ -95,7 +95,7 @@ library
                      , TypeOperators
                      , TypeSynonymInstances
                      , UnicodeSyntax
-  build-depends:       QuickCheck
+  build-depends:       QuickCheck < 2.11
                      , array
                      , async
                      , base >= 4.9 && < 5
@@ -139,7 +139,7 @@ test-suite tests
                      , Data.MediaBus.Conduit.StreamSpec
                      , Data.MediaBus.Basics.TicksSpec
   default-language:    Haskell2010
-  build-depends:       QuickCheck
+  build-depends:       QuickCheck < 2.11
                      , array
                      , async
                      , base >= 4.9 && < 5
