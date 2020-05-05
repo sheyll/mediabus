@@ -31,7 +31,6 @@ library
                      , Data.MediaBus.Conduit.Audio.Raw.DebugSink
                      , Data.MediaBus.Conduit.Audio.Raw.Resample
                      , Data.MediaBus.Conduit.Discontinous
-                     , Data.MediaBus.Conduit.Logging
                      , Data.MediaBus.Conduit.Reorder
                      , Data.MediaBus.Conduit.Segment
                      , Data.MediaBus.Conduit.Stream
