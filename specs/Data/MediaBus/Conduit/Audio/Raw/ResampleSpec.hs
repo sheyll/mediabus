@@ -40,7 +40,7 @@ expectedResamplingResult xs lastVal =
 type AudioBuffer r = Audio (Hz r) Mono (Raw S16)
 
 resampleAndConsume ::
-  Source Identity (Stream SrcId32 SeqNum32 Ticks32At48000 () (AudioBuffer 8000)) ->
+  ConduitT () (Stream SrcId32 SeqNum32 Ticks32At48000 () (AudioBuffer 8000)) Identity () ->
   Pcm Mono S16 ->
   AudioBuffer 16000
 resampleAndConsume vvv lastVal =
@@ -49,7 +49,7 @@ resampleAndConsume vvv lastVal =
 singleFrameFromList ::
   Monad m =>
   [Pcm Mono S16] ->
-  Source m (Stream SrcId32 SeqNum32 Ticks32At48000 () (AudioBuffer 8000))
+  ConduitT () (Stream SrcId32 SeqNum32 Ticks32At48000 () (AudioBuffer 8000)) m ()
 singleFrameFromList x =
   mapOutput
     (MkStream . Next)
@@ -60,7 +60,7 @@ singleFrameFromList x =
 framesFromLists ::
   Monad m =>
   [[Pcm Mono S16]] ->
-  Source m (Stream SrcId32 SeqNum32 Ticks32At48000 () (AudioBuffer 8000))
+  ConduitT () (Stream SrcId32 SeqNum32 Ticks32At48000 () (AudioBuffer 8000)) m ()
 framesFromLists xs =
   mapOutput
     (MkStream . Next)

@@ -31,7 +31,7 @@ _sampleSomeStream = MkALittleOutOfOrder <$> sample' arbitrary
 _yieldStream ::
   Monad m =>
   ALittleOutOfOrder ->
-  Source m (Stream () (SeqNum Word16) () () ())
+  ConduitT () (Stream () (SeqNum Word16) () () ()) m ()
 _yieldStream (MkALittleOutOfOrder frames) =
   yieldMany frames
     .| traceShowC 1 "ORIGINAL"

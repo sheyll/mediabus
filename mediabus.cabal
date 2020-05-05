@@ -32,6 +32,7 @@ library
                      , Data.MediaBus.Conduit.Audio.Raw.Resample
                      , Data.MediaBus.Conduit.Discontinous
                      , Data.MediaBus.Conduit.Reorder
+                     , Data.MediaBus.Conduit.RingBuffer
                      , Data.MediaBus.Conduit.Segment
                      , Data.MediaBus.Conduit.Stream
                      , Data.MediaBus.Conduit.SyncStream
@@ -129,13 +130,15 @@ test-suite tests
   type:                exitcode-stdio-1.0
   hs-source-dirs:      specs
   main-is:             Spec.hs
-  other-modules:       Data.MediaBus.Conduit.Audio.Raw.ResampleSpec
+  other-modules:       Data.MediaBus.Basics.TicksSpec
+                     , Data.MediaBus.Conduit.Audio.Raw.ResampleSpec
+                     , Data.MediaBus.Conduit.ReorderSpec
+                     , Data.MediaBus.Conduit.RingBufferSpec
+                     , Data.MediaBus.Conduit.SegmentSpec
+                     , Data.MediaBus.Conduit.SpecUtils
+                     , Data.MediaBus.Conduit.StreamSpec
                      , Data.MediaBus.Media.BufferSpec
                      , Data.MediaBus.Media.SyncStreamSpec
-                     , Data.MediaBus.Conduit.SegmentSpec
-                     , Data.MediaBus.Conduit.ReorderSpec
-                     , Data.MediaBus.Conduit.StreamSpec
-                     , Data.MediaBus.Basics.TicksSpec
   default-language:    Haskell2010
   build-depends:       QuickCheck
                      , array

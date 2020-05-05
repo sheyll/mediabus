@@ -136,21 +136,21 @@ mapTimestampC' ::
   ConduitT (Stream i s t p c) (Stream i s t' p c) m ()
 mapTimestampC' = mapC . withStrategy rdeepseq . over timestamp
 
--- | A conduit that applies the given pure function to 'eachFrameContent' of a 'Stream'.
+-- | A conduit that applies the given pure function to 'eachFramePayload' of a 'Stream'.
 mapFrameContentC' ::
   (NFData c', Monad m) =>
   (c -> c') ->
   ConduitT (Stream i s t p c) (Stream i s t p c') m ()
-mapFrameContentC' !f = mapC (over eachFrameContent (withStrategy rdeepseq . f))
+mapFrameContentC' !f = mapC (over eachFramePayload (withStrategy rdeepseq . f))
 
 -- * Monadic mapping over 'Stream' conduits
 
--- | A conduit that applies the given monadic function to 'eachFrameContent' of a 'Stream'.
+-- | A conduit that applies the given monadic function to 'eachFramePayload' of a 'Stream'.
 mapFrameContentMC ::
   Monad m =>
   (c -> m c') ->
   ConduitT (Stream i s t p c) (Stream i s t p c') m ()
-mapFrameContentMC = mapMC . mapMOf eachFrameContent
+mapFrameContentMC = mapMC . mapMOf eachFramePayload
 
 -- | A strict variant of 'mapFrameContentMC'
 mapFrameContentMC' ::
@@ -158,7 +158,7 @@ mapFrameContentMC' ::
   (c -> m c') ->
   ConduitT (Stream i s t p c) (Stream i s t p c') m ()
 mapFrameContentMC' !f =
-  mapMC (mapMOf eachFrameContent f >=> return . withStrategy rdeepseq)
+  mapMC (mapMOf eachFramePayload f >=> return . withStrategy rdeepseq)
 
 -- * Folding over 'Stream' conduits
 
@@ -179,7 +179,7 @@ foldStreamM ::
 foldStreamM !f = execWriterC $ awaitForever (lift . lift . f >=> tell)
 
 -- | Under the constraint that the stream content is a monoid, fold over the
--- stream appending all frame contents, i.e. 'foldStream' of 'eachFrameContent'.
+-- stream appending all frame contents, i.e. 'foldStream' of 'eachFramePayload'.
 -- When the conduit finishes the monoidal value is returned.
 concatStreamContents ::
   (Monoid c, Monad m) => ConduitT (Stream i s t p c) Void m c

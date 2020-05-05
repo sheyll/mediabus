@@ -1,12 +1,11 @@
 -- | Asynchronous execution of conduits. This module contains a set of functions
 -- to concurrently execute 'Stream' processing conduits and couple them using
 -- 'TBQueue's.
-module Data.MediaBus.Conduit.Async
-  ( withAsyncPolledSource,
-    FrameContentQ (),
-    mkFrameContentQ,
-    frameContentQSink,
-    frameContentQSource,
+module Data.MediaBus.Conduit.RingBuffer
+  ( RingBuffer (),
+    mkRingBuffer,
+    ringBufferSink,
+    ringBufferSource,
   )
 where
 
@@ -34,80 +33,55 @@ import System.Random
 import Text.Printf
 import UnliftIO
 
-data PollFrameContentSourceSt s t
-  = MkPollFrameContentSourceSt
+data RingBufferState s t
+  = MkRingBufferState
       { _ppSeqNum :: !s,
         _ppTicks :: !t
       }
 
-makeLenses ''PollFrameContentSourceSt
+makeLenses ''RingBufferState
 
--- | Asynchronously run a 'Source' connected to a 'FrameContentQ' and create a
--- new source that consumes the queue by polling periodically from that queue,
--- generating a 'Discontinous' output.
-withAsyncPolledSource ::
-  ( MonadResource m,
-    MonadLogger m,
-    MonadUnliftIO m,
-    KnownRate r,
-    Integral t,
-    Integral s,
-    Default p,
-    HasStaticDuration c,
-    HasDuration c,
-    NFData c,
-    NFData p,
-    NFData s,
-    NFData t,
-    Random i,
-    Random t,
-    Random s,
-    Show c
-  ) =>
-  Natural ->
-  ConduitT () (Stream i s (Ticks r t) p c) m () ->
-  ( ( Async (),
-      ConduitT () (Stream i s (Ticks r t) p (Discontinous c)) m ()
-    ) ->
-    m o
-  ) ->
-  m o
-withAsyncPolledSource !frameQueueLen !src !f = do
-  !pq <- mkFrameContentQ frameQueueLen
-  withAsync
-    (runConduit (src .| frameContentQSink pq))
-    (\a -> f (void a, frameContentQSource pq))
-
--- | A queue for 'frameContent' to decouple concurrent conduits carrying
--- 'Stream's. Under the hood a 'TBQueue' is used. A queue also knows it's
--- default segment duration and preferred polling interval.
-data FrameContentQ a
-  = MkFrameContentQ
-      { _frameContentQSegmentDuration :: !NominalDiffTime,
-        _frameContentQPollInterval :: !NominalDiffTime,
-        _frameContentQRing :: !(TBQueue a)
+-- | A ring like queue, to provide a constant flow of frames.
+--
+-- This helps to decouple concurrent conduits carrying
+-- 'Stream's.
+--
+-- The implementation uses bounded queues 'TBQueue'.
+--
+-- The ring buffer relies on a fixed segment duration.
+--
+-- The internal queue can be filled from one thread and consumed by
+-- another thread.
+--
+-- Refer to 'ringBufferSink' to learn howto put data into the ring
+-- and 'ringBufferSource' on how to retreive data.
+data RingBuffer a
+  = MkRingBuffer
+      { _ringBufferSegmentDuration :: !NominalDiffTime,
+        _ringBufferPollInterval :: !NominalDiffTime,
+        _ringBufferRing :: !(TBQueue a)
       }
 
--- | Create a new 'FrameContentQ' with an upper bound on the queue length.
-mkFrameContentQ ::
+-- | Create a new 'RingBuffer' with an upper bound on the queue length.
+mkRingBuffer ::
   forall m a.
   (HasStaticDuration a, MonadIO m) =>
   Natural ->
-  m (FrameContentQ a)
-mkFrameContentQ qlen =
-  MkFrameContentQ segmentDuration (fromIntegral qlen * 0.5 * segmentDuration)
+  m (RingBuffer a)
+mkRingBuffer qlen =
+  MkRingBuffer segmentDuration (fromIntegral qlen * 0.5 * segmentDuration)
     <$> newTBQueueIO qlen
   where
     segmentDuration = getStaticDuration (Proxy :: Proxy a)
 
 -- | Consume the 'frameContent's of a 'Stream' and write them into a
--- 'FrameContentQ'. When the queue is full, **drop the oldest element** and push
+-- 'RingBuffer'. When the queue is full, **drop the oldest element** and push
 -- in the new element, anyway.
-frameContentQSink ::
+ringBufferSink ::
   (NFData a, Show a, MonadLogger m, MonadIO m) =>
-  FrameContentQ a ->
+  RingBuffer a ->
   ConduitT (Stream i s t p a) Void m ()
-frameContentQSink (MkFrameContentQ _ _ !ringRef) = awaitForever go
+ringBufferSink (MkRingBuffer _ _ !ringRef) = awaitForever go
   where
     go !x = do
       maybe (return ()) pushInRing (x ^? eachFramePayload)
@@ -123,9 +97,9 @@ frameContentQSink (MkFrameContentQ _ _ !ringRef) = awaitForever go
               return isFull
           when isFull $ $logInfo "queue full"
 
--- | Periodically poll a 'FrameContentQ' and yield the content as frames with
+-- | Periodically poll a 'RingBuffer' and yield the content as frames with
 -- newly generated timestamp and sequence number values.
-frameContentQSource ::
+ringBufferSource ::
   ( Random i,
     NFData c,
     NFData p,
@@ -140,18 +114,18 @@ frameContentQSource ::
     NFData t,
     NFData s
   ) =>
-  FrameContentQ c ->
+  RingBuffer c ->
   ConduitT () (Stream i s (Ticks r t) p (Discontinous c)) m ()
-frameContentQSource (MkFrameContentQ pTime pollIntervall ringRef) =
-  evalStateC (MkPollFrameContentSourceSt 0 0) $ do
+ringBufferSource (MkRingBuffer pTime pollIntervall ringRef) =
+  evalStateC (MkRingBufferState 0 0) $ do
     yieldStart
     go False
   where
-    -- TODO this breaks when 'frameContentQPollInterval < duration c'?
+    -- TODO this breaks when 'ringBufferPollInterval < duration c'?
     --      to fix add a 'timePassedSinceLastBufferReceived' parameter to 'go'
     --      when no new from could be read from the queue after waiting for 'dt'
-    --      seconds, the time waited is added to 'frameContentQPollInterval'
-    --      and if 'frameContentQPollIntervall' is greater than the 'duration of c'
+    --      seconds, the time waited is added to 'ringBufferPollInterval'
+    --      and if 'ringBufferPollIntervall' is greater than the 'duration of c'
     --      a 'Missing' is yielded and 'duration of c' is subtracted from
     --      'timePassedSinceLastBufferReceived'.
     go wasMissing = do

@@ -11,7 +11,7 @@ module Data.MediaBus.Media.Stream
     frameCtxInit,
     EachFrameCtxInit (..),
     Frame (..),
-    EachFrameContent (..),
+    EachFramePayload (..),
     frameSeqNum,
     frameTimestamp,
     framePayload,
@@ -32,23 +32,23 @@ import Data.MediaBus.Media.Media
 import GHC.Generics (Generic)
 import Test.QuickCheck
 
--- | Meta information about a media stream.
-data FrameCtx i s t p
+-- | Meta information about a media 'Stream'.
+data FrameCtx sourceId sequenceNumber timestamp initSegment
   = MkFrameCtx
       { -- | An identifier for the stream, e.g. a track name
         -- or an RTP SSRC
-        _frameCtxSourceId :: !i,
+        _frameCtxSourceId :: !sourceId,
         -- | The start time stamp of a stream all time
         -- stamps in the 'Frame's are relative to this.
-        _frameCtxTimestampRef :: !t,
+        _frameCtxTimestampRef :: !timestamp,
         -- | The start sequence number of a stream all
         -- sequence numbers in the 'Frame's are relative to
         -- this.
-        _frameCtxSeqNumRef :: !s,
+        _frameCtxSeqNumRef :: !sequenceNumber,
         -- | An extra field for media type specific extra
         -- information, like the init segment of an ISOBMFF
         -- media.
-        _frameCtxInit :: !p
+        _frameCtxInit :: !initSegment
       }
   deriving (Eq, Ord, Generic)
 
@@ -132,18 +132,18 @@ deriving instance Functor (Frame s t)
 makeLenses ''Frame
 
 -- | Class for types that have a 'Traversal' for '_framePayload'
-class EachFrameContent s t where
-  type FrameContentFrom s
-  type FrameContentTo t
+class EachFramePayload s t where
+  type FramePayloadFrom s
+  type FramePayloadTo t
 
   -- | A traversal for the frame content of all 'Frame's, skipping over any
   -- 'FrameCtx'
-  eachFrameContent :: Traversal s t (FrameContentFrom s) (FrameContentTo t)
+  eachFramePayload :: Traversal s t (FramePayloadFrom s) (FramePayloadTo t)
 
-instance EachFrameContent (Frame s t c) (Frame s t c') where
-  type FrameContentFrom (Frame s t c) = c
-  type FrameContentTo (Frame s t c') = c'
-  eachFrameContent = framePayload
+instance EachFramePayload (Frame s t c) (Frame s t c') where
+  type FramePayloadFrom (Frame s t c) = c
+  type FramePayloadTo (Frame s t c') = c'
+  eachFramePayload = framePayload
 
 instance
   (EachChannel c c') =>
@@ -202,9 +202,11 @@ instance
         . showChar ' '
         . showsPrec 11 v
 
--- | A type for values that belong to a 'Series' of 'Frame's started by a
+-- | A 'Series' of 'Frame's started by a
 -- 'FrameCtx'. This combines the sum type 'Series' which has either 'Start' or
 -- 'Next' with 'FrameCtx' and 'Frame'.
+--
+-- This a just a newtype wrapper around 'Streamish'
 newtype Stream i s t p c
   = MkStream
       { _stream :: Streamish i s t p c
@@ -216,7 +218,10 @@ instance
   NFData (Stream i s t p c)
 
 -- | This is the type alias that 'Stream' is a newtype wrapper of, see the
--- description of 'Stream'.
+-- description of 'Stream'. This combines the sum type 'Series' which has either 'Start' or
+-- 'Next' with 'FrameCtx' and 'Frame'.
+--
+-- See 'Stream' for the newtype wrapper.
 type Streamish i s t p c = Series (FrameCtx i s t p) (Frame s t c)
 
 makeLenses ''Stream
@@ -245,10 +250,10 @@ instance HasTimestamp (Stream i s t p c) where
   type SetTimestamp (Stream i s t p c) t' = Stream i s t' p c
   timestamp = stream . timestamp
 
-instance EachFrameContent (Stream i s t p c) (Stream i s t p c') where
-  type FrameContentFrom (Stream i s t p c) = c
-  type FrameContentTo (Stream i s t p c') = c'
-  eachFrameContent = stream . _Next . framePayload
+instance EachFramePayload (Stream i s t p c) (Stream i s t p c') where
+  type FramePayloadFrom (Stream i s t p c) = c
+  type FramePayloadTo (Stream i s t p c') = c'
+  eachFramePayload = stream . _Next . framePayload
 
 instance
   (Default c, Default s, Default t) =>
