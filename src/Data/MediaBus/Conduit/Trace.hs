@@ -1,16 +1,16 @@
 -- | Probabilistic tracing conduits using 'Debug.Trace'
 module Data.MediaBus.Conduit.Trace
-    ( exitAfterC
-    , traceShowC
-    , traceShowSink
-    )
+  ( exitAfterC,
+    traceShowC,
+    traceShowSink,
+  )
 where
 
-import           Conduit
-import           Data.Conduit.List
-import           Control.Monad.State.Strict    as State
-import           Debug.Trace
-import           System.Random
+import Conduit
+import Control.Monad.State.Strict as State
+import Data.Conduit.List
+import Debug.Trace
+import System.Random
 
 -- | Receive and trace the 'Show'n value prefixed by a message and then yield
 -- down the stream. Since the number of elements sent over a conduit can be
@@ -20,22 +20,23 @@ import           System.Random
 -- logging.
 traceShowC :: (Show a, Monad m) => Double -> String -> ConduitT a a m ()
 traceShowC probability msg =
-    evalStateC (mkStdGen 100, 0 :: Integer) $ awaitForever $ \x -> do
-        (g, omitted) <- State.get
-        let (p, g') = randomR (0, 1) g
-        if p < probability
-            then do
-                let omittedmsg = if omitted == 0
-                        then ""
-                        else " *** " ++ show omitted ++ " messages omitted"
-                traceM
-                    (  (if null msg then "" else msg ++ ": ")
-                    ++ show x
-                    ++ omittedmsg
-                    )
-                State.put (g', 0)
-            else State.put (g', omitted + 1)
-        yield x
+  evalStateC (mkStdGen 100, 0 :: Integer) $ awaitForever $ \x -> do
+    (g, omitted) <- State.get
+    let (p, g') = randomR (0, 1) g
+    if p < probability
+      then do
+        let omittedmsg =
+              if omitted == 0
+                then ""
+                else " *** " ++ show omitted ++ " messages omitted"
+        traceM
+          ( (if null msg then "" else msg ++ ": ")
+              ++ show x
+              ++ omittedmsg
+          )
+        State.put (g', 0)
+      else State.put (g', omitted + 1)
+    yield x
 
 -- | Like 'traceShowC' but implemented as a 'Consumer' that also returns all
 -- received inputs as a list when the conduit terminates.
@@ -48,4 +49,4 @@ traceShowSink probability msg = traceShowC probability msg .| consume
 exitAfterC :: Monad m => Int -> ConduitT a a m ()
 exitAfterC 0 = return ()
 exitAfterC n =
-    await >>= maybe (return ()) (yield >=> const (exitAfterC (n - 1)))
+  await >>= maybe (return ()) (yield >=> const (exitAfterC (n - 1)))

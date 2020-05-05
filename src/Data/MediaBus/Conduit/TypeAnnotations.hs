@@ -1,17 +1,18 @@
 -- | Conduit combinators that make the type of a conduit unambiguous to the
 -- compiler via proxies.
 module Data.MediaBus.Conduit.TypeAnnotations
-  ( annotateTypeC
-  , annotateTypeCIn
-  , annotateTypeCOut
-  , annotateTypeSource
-  , annotateTypeSink
+  ( annotateTypeC,
+    annotateTypeCIn,
+    annotateTypeCOut,
+    annotateTypeSource,
+    annotateTypeSink,
   )
 where
 
-import           Conduit
+import Conduit
 
 -- * Generic Conduits
+
 -- | Annotate the type of a 'Conduit' where input and output are the same
 annotateTypeC :: proxy a -> ConduitT a a m () -> ConduitT a a m ()
 annotateTypeC _ = id

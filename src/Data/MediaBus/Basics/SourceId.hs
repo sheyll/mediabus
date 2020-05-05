@@ -4,13 +4,14 @@
 -- 'SourceId' is that every thing that has a certain source id stems from **the
 -- same media source**, e.g. the same microphone, audio file, synthesizer,...
 module Data.MediaBus.Basics.SourceId
-  ( SourceId(..)
-  , sourceIdValue
-  , type SrcId32
-  , type SrcId64
-  , HasSourceId(..)
-  , EachSourceId(..)
-  ) where
+  ( SourceId (..),
+    sourceIdValue,
+    type SrcId32,
+    type SrcId64,
+    HasSourceId (..),
+    EachSourceId (..),
+  )
+where
 
 import Control.DeepSeq
 import Control.Lens
@@ -21,9 +22,11 @@ import Test.QuickCheck
 
 -- | Things that can be uniquely identified by a looking at a (much simpler)
 -- representation, the 'identity'.
-newtype SourceId i = MkSourceId
-  { _sourceIdValue :: i
-  } deriving (Eq, Arbitrary, Default, Ord, Generic)
+newtype SourceId i
+  = MkSourceId
+      { _sourceIdValue :: i
+      }
+  deriving (Eq, Arbitrary, Default, Ord, Generic)
 
 -- | An 'Iso' for the value of a 'SourceId'
 sourceIdValue :: Iso (SourceId a) (SourceId b) a b
@@ -35,11 +38,14 @@ type SrcId32 = SourceId Word32
 -- | A short alias for 'SourceId' with a 'Word64' value
 type SrcId64 = SourceId Word64
 
-instance (NFData i) =>
-         NFData (SourceId i)
+instance
+  (NFData i) =>
+  NFData (SourceId i)
 
-instance Show i =>
-         Show (SourceId i) where
+instance
+  Show i =>
+  Show (SourceId i)
+  where
   showsPrec d (MkSourceId x) =
     showParen (d > 10) $ showString "source-id: " . showsPrec 11 x
 
@@ -47,6 +53,7 @@ instance Show i =>
 class HasSourceId s t where
   type SourceIdFrom s
   type SourceIdTo t
+
   -- | A lens for the 'SourceId'
   sourceId :: Lens s t (SourceIdFrom s) (SourceIdTo t)
 
@@ -55,5 +62,6 @@ class HasSourceId s t where
 class EachSourceId s t where
   type SourceIdsFrom s
   type SourceIdsTo t
+
   -- | A 'Traversal' for the 'SourceId'
   eachSourceId :: Traversal s t (SourceIdsFrom s) (SourceIdsTo t)

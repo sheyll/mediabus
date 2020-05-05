@@ -9,37 +9,42 @@
 --   the same time instances, they form a sample only when combined not when
 --   regarded indivudually.
 module Data.MediaBus.Media.Samples
-  ( IsSampledMedia()
-  , type CanBeSample
-  , EachSample(..)
-  , type EachSampleL
-  , type EachSampleL'
-  , type EachSample'
-  , eachSample'
-  ) where
+  ( IsSampledMedia (),
+    type CanBeSample,
+    EachSample (..),
+    type EachSampleL,
+    type EachSampleL',
+    type EachSample',
+    eachSample',
+  )
+where
 
 import Control.DeepSeq
 import Control.Lens
-import Data.MediaBus.Media.Media
 import Data.MediaBus.Basics.Ticks
+import Data.MediaBus.Media.Media
 import Data.Typeable
 import Foreign.Storable
 
 -- | Types that are 'IsMedia' instances with sampled content.
-class (IsMedia i, HasRate i) =>
-      IsSampledMedia i
+class
+  (IsMedia i, HasRate i) =>
+  IsSampledMedia i
 
 -- | Always recurring contraints on 'Sample' types.
 type CanBeSample i = (Typeable i, Eq i, NFData i, Storable i)
 
 -- | A type class for types that contain samples which can be converted into
 -- other sample types.
-class (CanBeSample (SamplesFrom s), CanBeSample (SamplesTo t)) =>
-      EachSample s t where
+class
+  (CanBeSample (SamplesFrom s), CanBeSample (SamplesTo t)) =>
+  EachSample s t where
   -- | The type of the contained media samples passed as input by 'eachSample'.
   type SamplesFrom s
+
   -- | The type of the contained media samples from the output of 'eachSample'.
   type SamplesTo t
+
   --  | Traversal for accessing each individual sample.
   -- The default implementation uses an 'EachSampleL' instance
   eachSample :: Traversal s t (SamplesFrom s) (SamplesTo t)
@@ -55,7 +60,7 @@ type EachSampleL' s a = (EachSample s s, SamplesFrom s ~ a, SamplesTo s ~ a)
 type EachSample' s = (EachSample s s, SamplesFrom s ~ SamplesTo s)
 
 -- | A variant of 'eachSample' for cases where @'SamplesFrom' ~ 'SamplesTo'@.
-eachSample'
-  :: EachSample' i
-  => Traversal' i (SamplesFrom i)
+eachSample' ::
+  EachSample' i =>
+  Traversal' i (SamplesFrom i)
 eachSample' = eachSample

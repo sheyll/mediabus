@@ -1,8 +1,9 @@
 -- | Reorder the 'Frame's in 'Conduit' of a 'Stream'.
 module Data.MediaBus.Conduit.Reorder
-  ( reorderFramesBySeqNumC
-  , reorderFramesByC
-  ) where
+  ( reorderFramesBySeqNumC,
+    reorderFramesByC,
+  )
+where
 
 import Conduit
 import Control.Lens
@@ -14,12 +15,13 @@ import Data.MediaBus.Basics.Series
 import Data.MediaBus.Media.Stream
 import qualified Data.Set as Set
 
-data ReorderSt a b c = MkReorderSt
-  { _expectedRank :: !a
-  , _frameQueue :: !(Set.Set (OrderedBy a b))
-  , _frameDrops :: !Int
-  , _lastFrameCtx :: !c
-  }
+data ReorderSt a b c
+  = MkReorderSt
+      { _expectedRank :: !a,
+        _frameQueue :: !(Set.Set (OrderedBy a b)),
+        _frameDrops :: !Int,
+        _lastFrameCtx :: !c
+      }
 
 makeLenses ''ReorderSt
 
@@ -30,28 +32,32 @@ makeLenses ''ReorderSt
 -- 'Start' will be created, and the buffered elements are silently dropped, too.
 -- When a 'Start' is received that internal buffer is flushed and all queued
 -- frames are transmitted.
-reorderFramesBySeqNumC
-  :: (Default s, Default i, Default t, Default p, Num s, Ord s, Monad m)
-  => Int -- ^ The maximun number of out-of-order frames to buffer.
-  -> ConduitT (Stream i s t p c) (Stream i s t p c) m ()
+reorderFramesBySeqNumC ::
+  (Default s, Default i, Default t, Default p, Num s, Ord s, Monad m) =>
+  -- | The maximun number of out-of-order frames to buffer.
+  Int ->
+  ConduitT (Stream i s t p c) (Stream i s t p c) m ()
 reorderFramesBySeqNumC = reorderFramesByC seqNum (+ 1)
 
 -- | Like 'reorderFramesBySeqNumC' but more general. This function allows to
 -- pass a 'Lens' to the specific field of each 'Frame', that shall be used for
 -- comparison, which governs the order.
-reorderFramesByC
-  :: ( Monad m
-     , Ord rank
-     , Default i
-     , Default t
-     , Default s
-     , Default p
-     , Default rank
-     )
-  => Lens' (Stream i s t p c) rank -- ^ A lens for the value to be used as comparison
-  -> (rank -> rank) -- ^ A function that returns the **expected next value** of the comparison value
-  -> Int -- ^ The maximum number of frames to buffer
-  -> ConduitT (Stream i s t p c) (Stream i s t p c) m ()
+reorderFramesByC ::
+  ( Monad m,
+    Ord rank,
+    Default i,
+    Default t,
+    Default s,
+    Default p,
+    Default rank
+  ) =>
+  -- | A lens for the value to be used as comparison
+  Lens' (Stream i s t p c) rank ->
+  -- | A function that returns the **expected next value** of the comparison value
+  (rank -> rank) ->
+  -- | The maximum number of frames to buffer
+  Int ->
+  ConduitT (Stream i s t p c) (Stream i s t p c) m ()
 reorderFramesByC !frameRank !getNextRank !maxQueueLen =
   evalStateC (MkReorderSt def Set.empty 0 def) go
   where
@@ -71,20 +77,20 @@ reorderFramesByC !frameRank !getNextRank !maxQueueLen =
             EQ -> do
               yieldNext frm
               maybeYieldNextFromQueue
-            LT
-                    -- drop the frame, it lacks behind
-             -> do
-              framesDropped <- frameDrops <+= 1
-              when (framesDropped == maxDrops) $ do
-                flushQueue
-                        -- yield a new Start frame
-                ctx <- use lastFrameCtx
-                let start =
-                      MkStream (Start ctx) & frameRank .~ (frm ^. frameRank)
-                    MkStream (Start ctx') = start
-                lastFrameCtx .= ctx'
-                yield start
-                yieldNext frm
+            LT ->
+              -- drop the frame, it lacks behind
+              do
+                framesDropped <- frameDrops <+= 1
+                when (framesDropped == maxDrops) $ do
+                  flushQueue
+                  -- yield a new Start frame
+                  ctx <- use lastFrameCtx
+                  let start =
+                        MkStream (Start ctx) & frameRank .~ (frm ^. frameRank)
+                      MkStream (Start ctx') = start
+                  lastFrameCtx .= ctx'
+                  yield start
+                  yieldNext frm
             GT -> do
               frameQueue %= Set.insert (MkOrderedBy (view frameRank frm) frm)
               maybeYieldNextFromQueue
@@ -104,8 +110,8 @@ reorderFramesByC !frameRank !getNextRank !maxQueueLen =
             Just (MkOrderedBy !currRank !candidate, !q') ->
               let !isQueueFull = Set.size q == maxQueueLen
                   !isNextInQueue = currRank <= expRank
-              in when (isQueueFull || isNextInQueue) $ do
-                   frameQueue .= q'
-                   yieldNext candidate
-                   maybeYieldNextFromQueue
+               in when (isQueueFull || isNextInQueue) $ do
+                    frameQueue .= q'
+                    yieldNext candidate
+                    maybeYieldNextFromQueue
         updateExpectedRank = expectedRank %= getNextRank

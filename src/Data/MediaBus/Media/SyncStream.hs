@@ -11,10 +11,11 @@
 -- When the library author chooses 'SyncStream', the library users then know,
 -- that the library function relies on a synchronized stream.
 module Data.MediaBus.Media.SyncStream
-  ( type SyncStream
-  , assumeSynchronized
-  , setSequenceNumberAndTimestamp
-  ) where
+  ( type SyncStream,
+    assumeSynchronized,
+    setSequenceNumberAndTimestamp,
+  )
+where
 
 import Data.MediaBus.Basics.Series
 import Data.MediaBus.Basics.Ticks
@@ -42,13 +43,14 @@ assumeSynchronized (MkStream (Next (MkFrame _ _ c))) =
 -- Start the timestamp at @0@ and add the 'Frame' duration of the 'Next'
 -- frame in the stream.
 -- This function has the signature required to turn it into a 'State' monad.
-setSequenceNumberAndTimestamp
-  :: (Num s, CanBeTicks r t, HasDuration c)
-  => SyncStream i p c
-  -> (s, Ticks r t)
-  -> (Stream i s (Ticks r t) p c, (s, Ticks r t))
+setSequenceNumberAndTimestamp ::
+  (Num s, CanBeTicks r t, HasDuration c) =>
+  SyncStream i p c ->
+  (s, Ticks r t) ->
+  (Stream i s (Ticks r t) p c, (s, Ticks r t))
 setSequenceNumberAndTimestamp (MkStream (Next (MkFrame _t _s !c))) (nextS, nextT) =
-  ( MkStream (Next (MkFrame nextT nextS c))
-  , (nextS + 1, nextT + getDurationTicks c))
+  ( MkStream (Next (MkFrame nextT nextS c)),
+    (nextS + 1, nextT + getDurationTicks c)
+  )
 setSequenceNumberAndTimestamp (MkStream (Start (MkFrameCtx i _t _s p))) (nextS, nextT) =
   ((MkStream (Start (MkFrameCtx i nextT nextS p))), (nextS, nextT))

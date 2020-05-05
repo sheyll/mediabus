@@ -1,8 +1,9 @@
 -- | Multi media processing library.
 -- This module only reexports all other modules in this package.
 module Data.MediaBus
-  ( module X
-  ) where
+  ( module X,
+  )
+where
 
 import Data.MediaBus.Basics.Clock as X
 import Data.MediaBus.Basics.LoggingExtra as X

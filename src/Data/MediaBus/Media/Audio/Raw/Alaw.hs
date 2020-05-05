@@ -1,15 +1,16 @@
 -- | This module defines the **Alaw** audio sample type, as well as compading
 -- conversion functions from/to 'S16' values.
 module Data.MediaBus.Media.Audio.Raw.Alaw
-  ( ALaw()
-  , encodeALawSample
-  , decodeALawSample
-  , alawSample
-  , alawValue
-  ) where
+  ( ALaw (),
+    encodeALawSample,
+    decodeALawSample,
+    alawSample,
+    alawValue,
+  )
+where
 
-import Control.Lens
 import Control.DeepSeq (NFData)
+import Control.Lens
 import Data.Bits
 import Data.Default
 import Data.Function (on)
@@ -21,23 +22,26 @@ import Data.Typeable
 import Data.Word
 import Foreign.Storable
 import GHC.Generics (Generic)
-import Test.QuickCheck (Arbitrary(..))
+import Test.QuickCheck (Arbitrary (..))
 
 -- | A PCM audio sample represented by a single byte, that can be converted to a
 -- signed 13bit audio sample.
-newtype ALaw = MkALaw
-  { _alawValue :: Word8
-  } deriving ( Show
-             , Storable
-             , Num
-             , Eq
-             , Bits
-             , Arbitrary
-             , Generic
-             , NFData
-             , Default
-             , Typeable
-             )
+newtype ALaw
+  = MkALaw
+      { _alawValue :: Word8
+      }
+  deriving
+    ( Show,
+      Storable,
+      Num,
+      Eq,
+      Bits,
+      Arbitrary,
+      Generic,
+      NFData,
+      Default,
+      Typeable
+    )
 
 -- | An 'Iso' for 'ALaw' sample values.
 alawValue :: Iso' ALaw Word8
@@ -72,10 +76,10 @@ decodeALawSample (MkALaw !a') =
           1 -> tBase + 264
           _ -> (tBase + 264) `shiftL` fromIntegral (seg - 1)
       !isPos = testBit a 7
-  in MkS16 $
-     if isPos
-       then tAbs
-       else tAbs * (-1)
+   in MkS16 $
+        if isPos
+          then tAbs
+          else tAbs * (-1)
 
 -- | See http://opensource.apple.com//source/tcl/tcl-20/tcl_ext/snack/snack/generic/g711.c
 --
@@ -97,10 +101,14 @@ encodeALawSample (MkS16 !pcmVal') =
   let !pcmVal = pcmVal' `shiftR` 3 -- to 13 bit
       (!mask, !pcmValAbs) =
         if pcmVal >= 0
-          then ( 0xD5 -- sign bit (bit 7) = 1
-               , pcmVal)
-          else ( 0x55 -- sign bit = 0
-               , (-1) * pcmVal - 1)
+          then
+            ( 0xD5, -- sign bit (bit 7) = 1
+              pcmVal
+            )
+          else
+            ( 0x55, -- sign bit = 0
+              (-1) * pcmVal - 1
+            )
       !segment
         | pcmValAbs <= 31 = 0
         | pcmValAbs <= 63 = 1
@@ -114,9 +122,10 @@ encodeALawSample (MkS16 !pcmVal') =
       !res =
         if segment == 8
           then 0x7F
-          else let !segShift =
-                     if segment < 2
-                       then 1
-                       else fromIntegral segment
-               in shiftL segment 4 .|. (shiftR pcmValAbs segShift .&. 0xF)
-  in MkALaw (fromIntegral res `xor` mask)
+          else
+            let !segShift =
+                  if segment < 2
+                    then 1
+                    else fromIntegral segment
+             in shiftL segment 4 .|. (shiftR pcmValAbs segShift .&. 0xF)
+   in MkALaw (fromIntegral res `xor` mask)

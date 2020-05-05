@@ -1,6 +1,7 @@
 module Data.MediaBus.Basics.Monotone
-  ( LocalOrd(..)
-  ) where
+  ( LocalOrd (..),
+  )
+where
 
 import Data.Int
 import Data.Word
@@ -19,22 +20,22 @@ class LocalOrd a where
 instance LocalOrd Word8 where
   x `succeeds` y =
     let d = x - y
-    in d > 0 && d <= ((maxBound - minBound) `div` 2)
+     in d > 0 && d <= ((maxBound - minBound) `div` 2)
 
 instance LocalOrd Word16 where
   x `succeeds` y =
     let d = x - y
-    in d > 0 && d <= ((maxBound - minBound) `div` 2)
+     in d > 0 && d <= ((maxBound - minBound) `div` 2)
 
 instance LocalOrd Word32 where
   x `succeeds` y =
     let d = x - y
-    in d > 0 && d <= ((maxBound - minBound) `div` 2)
+     in d > 0 && d <= ((maxBound - minBound) `div` 2)
 
 instance LocalOrd Word64 where
   x `succeeds` y =
     let d = x - y
-    in d > 0 && d <= ((maxBound - minBound) `div` 2)
+     in d > 0 && d <= ((maxBound - minBound) `div` 2)
 
 instance LocalOrd Int8 where
   x `succeeds` y = x - y > 0
