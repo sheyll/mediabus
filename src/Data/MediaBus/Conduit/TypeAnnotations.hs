@@ -6,27 +6,28 @@ module Data.MediaBus.Conduit.TypeAnnotations
   , annotateTypeCOut
   , annotateTypeSource
   , annotateTypeSink
-  ) where
+  )
+where
 
-import Conduit
+import           Conduit
 
 -- * Generic Conduits
 -- | Annotate the type of a 'Conduit' where input and output are the same
-annotateTypeC :: proxy a -> Conduit a m a -> Conduit a m a
+annotateTypeC :: proxy a -> ConduitT a a m () -> ConduitT a a m ()
 annotateTypeC _ = id
 
 -- | Annotate the input type of a 'Conduit'
-annotateTypeCIn :: proxy a -> Conduit a m b -> Conduit a m b
+annotateTypeCIn :: proxy a -> ConduitT a b m () -> ConduitT a b m ()
 annotateTypeCIn _ = id
 
 -- | Annotate the output type of a 'Conduit'
-annotateTypeCOut :: proxy b -> Conduit a m b -> Conduit a m b
+annotateTypeCOut :: proxy b -> ConduitT a b m () -> ConduitT a b m ()
 annotateTypeCOut _ = id
 
 -- | Annotate the output type of a 'Source'
-annotateTypeSource :: proxy a -> Source m a -> Source m a
+annotateTypeSource :: proxy a -> ConduitT () a m () -> ConduitT () a m ()
 annotateTypeSource _ = id
 
 -- | Annotate the input type of a 'Sink'
-annotateTypeSink :: proxy a -> Sink a m r -> Sink a m r
+annotateTypeSink :: proxy a -> ConduitT a Void m r -> ConduitT a Void m r
 annotateTypeSink _ = id

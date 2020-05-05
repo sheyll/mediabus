@@ -7,28 +7,31 @@ module Data.MediaBus.Conduit.Async
   , mkFrameContentQ
   , frameContentQSink
   , frameContentQSource
-  ) where
+  )
+where
 
-import Conduit
-import Control.Concurrent (threadDelay)
-import Control.Concurrent.Async.Lifted
-import Control.Concurrent.STM
-import Control.Exception (evaluate)
-import Control.Lens
-import Control.Monad.Logger
-import Control.Monad.State
-import Control.Parallel.Strategies (NFData, rdeepseq, withStrategy)
-import Data.Default
-import Data.MediaBus.Basics.Clock
-import Data.MediaBus.Basics.Ticks
-import Data.MediaBus.Conduit.Stream
-import Data.MediaBus.Media.Discontinous
-import Data.MediaBus.Media.Stream
-import Data.Proxy
-import Data.Time.Clock
-import System.Random
-import Text.Printf
-import Data.String
+import           Conduit
+import           Control.Concurrent             ( threadDelay )
+import           Control.Lens
+import           Control.Monad.Logger
+import           Control.Monad.State
+import           Control.Parallel.Strategies    ( NFData
+                                                , rdeepseq
+                                                , withStrategy
+                                                )
+import           Data.Default
+import           Data.MediaBus.Basics.Clock
+import           Data.MediaBus.Basics.Ticks
+import           Data.MediaBus.Conduit.Stream
+import           Data.MediaBus.Media.Discontinous
+import           Data.MediaBus.Media.Stream
+import           Data.Proxy
+import           Data.Time.Clock
+import           System.Random
+import           Text.Printf
+import           Numeric.Natural
+import           Data.String
+import    UnliftIO
 
 data PollFrameContentSourceSt s t = MkPollFrameContentSourceSt
   { _ppSeqNum :: !s
@@ -43,7 +46,7 @@ makeLenses ''PollFrameContentSourceSt
 withAsyncPolledSource
   :: ( MonadResource m
      , MonadLogger m
-     , MonadBaseControl IO m
+     , MonadUnliftIO m
      , KnownRate r
      , Integral t
      , Integral s
@@ -59,15 +62,18 @@ withAsyncPolledSource
      , Random s
      , Show c
      )
-  => Int
-  -> Source m (Stream i s (Ticks r t) p c)
-  -> ((Async (), Source m (Stream i s (Ticks r t) p (Discontinous c))) -> m o)
+  => Natural
+  -> ConduitT () (Stream i s (Ticks r t) p c) m ()
+  -> (  ( Async ()
+       , ConduitT () (Stream i s (Ticks r t) p (Discontinous c)) m ()
+       )
+     -> m o
+     )
   -> m o
 withAsyncPolledSource !frameQueueLen !src !f = do
   !pq <- mkFrameContentQ frameQueueLen
-  withAsync
-    (runConduit (src .| frameContentQSink pq))
-    (\a -> f (void a, frameContentQSource pq))
+  withAsync (runConduit (src .| frameContentQSink pq))
+            (\a -> f (void a, frameContentQSource pq))
 
 -- | A queue for 'frameContent' to decouple concurrent conduits carrying
 -- 'Stream's. Under the hood a 'TBQueue' is used. A queue also knows it's
@@ -80,37 +86,37 @@ data FrameContentQ a = MkFrameContentQ
 
 -- | Create a new 'FrameContentQ' with an upper bound on the queue length.
 mkFrameContentQ
-  :: forall m a.
-     (HasStaticDuration a, MonadBaseControl IO m)
-  => Int -> m (FrameContentQ a)
+  :: forall m a
+   . (HasStaticDuration a, MonadIO m)
+  => Natural
+  -> m (FrameContentQ a)
 mkFrameContentQ qlen =
-  MkFrameContentQ segmentDuration (fromIntegral qlen * 0.5 * segmentDuration) <$>
-  liftBase (newTBQueueIO qlen)
-  where
-    segmentDuration = getStaticDuration (Proxy :: Proxy a)
+  MkFrameContentQ segmentDuration (fromIntegral qlen * 0.5 * segmentDuration)
+    <$> newTBQueueIO qlen
+  where segmentDuration = getStaticDuration (Proxy :: Proxy a)
 
 -- | Consume the 'frameContent's of a 'Stream' and write them into a
 -- 'FrameContentQ'. When the queue is full, **drop the oldest element** and push
 -- in the new element, anyway.
 frameContentQSink
-  :: (NFData a, MonadBaseControl IO m, Show a, MonadLogger m)
-  => FrameContentQ a -> Sink (Stream i s t p a) m ()
+  :: (NFData a, Show a, MonadLogger m, MonadIO m)
+  => FrameContentQ a
+  -> ConduitT (Stream i s t p a) Void m ()
 frameContentQSink (MkFrameContentQ _ _ !ringRef) = awaitForever go
-  where
-    go !x = do
-      maybe (return ()) pushInRing (x ^? eachFrameContent)
-      return ()
-      where
-        pushInRing !buf' = do
-          isFull <-
-            liftBase $ do
-              !buf <- evaluate $ withStrategy rdeepseq buf'
-              atomically $ do
-                isFull <- isFullTBQueue ringRef
-                when isFull (void $ readTBQueue ringRef)
-                writeTBQueue ringRef buf
-                return isFull
-          when isFull $ $logInfo "queue full"
+ where
+  go !x = do
+    maybe (return ()) pushInRing (x ^? eachFrameContent)
+    return ()
+   where
+    pushInRing !buf' = do
+      isFull <- do
+        !buf <- evaluate $ withStrategy rdeepseq buf'
+        atomically $ do
+          isFull <- isFullTBQueue ringRef
+          when isFull (void $ readTBQueue ringRef)
+          writeTBQueue ringRef buf
+          return isFull
+      when isFull $ $logInfo "queue full"
 
 -- | Periodically poll a 'FrameContentQ' and yield the content as frames with
 -- newly generated timestamp and sequence number values.
@@ -121,45 +127,57 @@ frameContentQSource
      , Default p
      , HasStaticDuration c
      , HasDuration c
-     , MonadBaseControl IO m
      , MonadLogger m
+     , MonadIO m
      , KnownRate r
      , Integral t
      , Integral s
      , NFData t
      , NFData s
      )
-  => FrameContentQ c -> Source m (Stream i s (Ticks r t) p (Discontinous c))
+  => FrameContentQ c
+  -> ConduitT () (Stream i s (Ticks r t) p (Discontinous c)) m ()
 frameContentQSource (MkFrameContentQ pTime pollIntervall ringRef) =
   evalStateC (MkPollFrameContentSourceSt 0 0) $ do
     yieldStart
     go False
-  where
-    go wasMissing = do
-      res <- liftBase $ race (atomically $ readTBQueue ringRef) sleep
-      case res of
-        Left buf -> yieldNextBuffer (Got buf) >> go False
-        Right dt -> yieldMissing dt wasMissing >> go True
-    sleep =
-      liftBase
-        (do !(t0 :: ClockTime UtcClock) <- now
-            threadDelay (_ticks pollIntervallMicros)
-            !t1 <- now
-            return (diffTime t1 t0 ^. utcClockTimeDiff))
-    yieldMissing !dt !wasMissing = do
-      unless
-        wasMissing
-        ($logDebug (fromString (printf "underflow: %s" (show dt))))
-      replicateM_ (floor (dt / pTime)) (yieldNextBuffer Missing)
-    yieldStart =
-      (MkFrameCtx <$> liftBase randomIO <*> use ppTicks <*> use ppSeqNum <*>
-       pure def) >>=
-      yieldStartFrameCtx
-    pollIntervallMicros :: Ticks (Hz 1000000) Int
-    pollIntervallMicros = nominalDiffTime # pollIntervall
-    yieldNextBuffer !buf = do
-      let !bufferDuration = nominalDiffTime # getDuration buf
-      !ts <- ppTicks <<+= bufferDuration
-      !sn <- ppSeqNum <<+= 1
-      frm <- liftBase (evaluate (withStrategy rdeepseq $ MkFrame ts sn buf))
-      yieldNextFrame frm
+ where
+  -- TODO this breaks when 'frameContentQPollInterval < duration c'?
+  --      to fix add a 'timePassedSinceLastBufferReceived' parameter to 'go'
+  --      when no new from could be read from the queue after waiting for 'dt'
+  --      seconds, the time waited is added to 'frameContentQPollInterval'
+  --      and if 'frameContentQPollIntervall' is greater than the 'duration of c'
+  --      a 'Missing' is yielded and 'duration of c' is subtracted from
+  --      'timePassedSinceLastBufferReceived'.
+  go wasMissing = do
+    res <- liftIO $ race (atomically $ readTBQueue ringRef) sleep
+    case res of
+      Left  buf -> yieldNextBuffer (Got buf) >> go False
+      Right dt  -> yieldMissing dt wasMissing >> go True
+  sleep = liftIO
+    (do
+      !(t0 :: ClockTime UtcClock) <- now
+      threadDelay (_ticks pollIntervallMicros)
+      !t1 <- now
+      return (diffTime t1 t0 ^. utcClockTimeDiff)
+    )
+  yieldMissing !dt !wasMissing = do
+    unless wasMissing
+           ($logDebug (fromString (printf "underflow: %s" (show dt)))) -- TODO add newtype FrameFromRingBuffer x, with an UnderflowAt clause and return that instead of logging
+    replicateM_ (floor (dt / pTime)) (yieldNextBuffer Missing)
+  yieldStart =
+    (   MkFrameCtx
+      <$> liftIO randomIO
+      <*> use ppTicks
+      <*> use ppSeqNum
+      <*> pure def
+      )
+      >>= yieldStartFrameCtx
+  pollIntervallMicros :: Ticks (Hz 1000000) Int
+  pollIntervallMicros = nominalDiffTime # pollIntervall
+  yieldNextBuffer !buf = do
+    let !bufferDuration = nominalDiffTime # getDuration buf
+    !ts <- ppTicks <<+= bufferDuration
+    !sn <- ppSeqNum <<+= 1
+    frm <- evaluate (withStrategy rdeepseq $ MkFrame ts sn buf)
+    yieldNextFrame frm

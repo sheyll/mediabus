@@ -1,13 +1,13 @@
 name:                mediabus
-version:             0.4.0.1
+version:             0.5.0.0
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/sheyll/mediabus
 license:             BSD3
 license-file:        LICENSE
 author:              Sven Heyll
-maintainer:          sven.heyll@lindenbaum.eu
-copyright:           2016,2017 Sven Heyll, Lindenbaum GmbH
+maintainer:          svh@posteo.de
+copyright:           2016-2020 Sven Heyll
 category:            Media
 build-type:          Simple
 -- extra-source-files:
@@ -55,7 +55,7 @@ library
                      , Data.MediaBus.Media.SyncStream
                      , Data.MediaBus.Transport.Udp
   default-language:    Haskell2010
-  ghc-options:       -O2 -Wall -funbox-strict-fields -fno-warn-unused-do-bind  -fprint-explicit-kinds
+  ghc-options:       -Wall -funbox-strict-fields -fno-warn-unused-do-bind  -fprint-explicit-kinds
   default-extensions:  ApplicativeDo
                      , BangPatterns
                      , ConstraintKinds
@@ -95,11 +95,12 @@ library
                      , TypeOperators
                      , TypeSynonymInstances
                      , UnicodeSyntax
-  build-depends:       QuickCheck < 2.11
+  build-depends:       QuickCheck
                      , array
                      , async
-                     , base >= 4.9 && < 5
+                     , base >= 4.12 && < 5
                      , bytestring
+                     , bytestring-to-vector >= 0.3
                      , cereal
                      , conduit
                      , conduit-combinators
@@ -108,8 +109,6 @@ library
                      , data-default
                      , deepseq
                      , lens
-                     , lifted-async
-                     , monad-control
                      , monad-logger
                      , mtl
                      , network
@@ -118,13 +117,13 @@ library
                      , process
                      , random
                      , resourcet
-                     , spool == 0.1
                      , stm
                      , streaming-commons
                      , tagged
                      , text
                      , time
                      , transformers
+                     , unliftio >= 0.2 && < 0.3
                      , vector < 13
 
 test-suite tests
@@ -139,12 +138,13 @@ test-suite tests
                      , Data.MediaBus.Conduit.StreamSpec
                      , Data.MediaBus.Basics.TicksSpec
   default-language:    Haskell2010
-  build-depends:       QuickCheck < 2.11
+  build-depends:       QuickCheck
                      , array
                      , async
-                     , base >= 4.9 && < 5
+                     , base >= 4.12 && < 5
                      , binary
                      , bytestring
+                     , bytestring-to-vector >= 0.3
                      , conduit
                      , conduit-combinators
                      , conduit-extra
@@ -154,10 +154,8 @@ test-suite tests
                      , deepseq
                      , hspec
                      , lens
-                     , monad-control
                      , mtl
                      , singletons
-                     , spool == 0.1
                      , stm
                      , tagged
                      , template-haskell
@@ -165,8 +163,8 @@ test-suite tests
                      , time
                      , transformers
                      , type-spec
+                     , unliftio >= 0.2 && < 0.3
                      , vector < 13
-  default-language:    Haskell2010
   default-extensions:  ApplicativeDo
                      , Arrows
                      , BangPatterns

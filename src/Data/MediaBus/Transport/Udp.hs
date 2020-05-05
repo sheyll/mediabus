@@ -20,7 +20,7 @@ udpDatagramSource :: (IsClock c, MonadClock c m, MonadResource m, Num s, Default
                   => proxy c
                   -> Int
                   -> HostPreference
-                  -> Source m (Stream (SourceId (Maybe SockAddr)) (SeqNum s) (ClockTimeDiff c) p B.ByteString)
+                  -> ConduitT () (Stream (SourceId (Maybe SockAddr)) (SeqNum s) (ClockTimeDiff c) p B.ByteString) m ()
 udpDatagramSource _clk port host = do
     !t0 <- lift now
     bracketP (bindPortUDP port host) close (`sourceSocket` 1024) .|

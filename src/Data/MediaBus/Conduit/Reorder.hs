@@ -33,7 +33,7 @@ makeLenses ''ReorderSt
 reorderFramesBySeqNumC
   :: (Default s, Default i, Default t, Default p, Num s, Ord s, Monad m)
   => Int -- ^ The maximun number of out-of-order frames to buffer.
-  -> Conduit (Stream i s t p c) m (Stream i s t p c)
+  -> ConduitT (Stream i s t p c) (Stream i s t p c) m ()
 reorderFramesBySeqNumC = reorderFramesByC seqNum (+ 1)
 
 -- | Like 'reorderFramesBySeqNumC' but more general. This function allows to
@@ -51,7 +51,7 @@ reorderFramesByC
   => Lens' (Stream i s t p c) rank -- ^ A lens for the value to be used as comparison
   -> (rank -> rank) -- ^ A function that returns the **expected next value** of the comparison value
   -> Int -- ^ The maximum number of frames to buffer
-  -> Conduit (Stream i s t p c) m (Stream i s t p c)
+  -> ConduitT (Stream i s t p c) (Stream i s t p c) m ()
 reorderFramesByC !frameRank !getNextRank !maxQueueLen =
   evalStateC (MkReorderSt def Set.empty 0 def) go
   where

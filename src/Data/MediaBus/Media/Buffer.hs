@@ -58,7 +58,7 @@ type HasMediaBufferL' s a = (HasMediaBuffer s s, MediaBufferFrom s ~ a, MediaBuf
 -- | A buffer for media data. This is just a newtype wrapper around 'V.Vector'.
 newtype MediaBuffer t = MkMediaBuffer
   { _mediaBufferVector :: V.Vector t
-  } deriving (Generic, NFData, Monoid, Eq)
+  } deriving (Generic, NFData, Semigroup, Monoid, Eq)
 
 -- | 'MediaBuffer' to 'Vector' isomorphism
 mediaBufferVector :: Iso (MediaBuffer s) (MediaBuffer t) (V.Vector s) (V.Vector t)

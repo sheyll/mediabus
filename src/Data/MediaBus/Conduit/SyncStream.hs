@@ -51,7 +51,7 @@ setSequenceNumberAndTimestampC =
 -- under the hood.
 assumeSynchronizedC
   :: (Monad m, KnownRate r, HasDuration d, Num s, CanBeTicks r t)
-  => ConduitM (SyncStream i p d) (Stream i s (Ticks r t) p d) m ()
+  => ConduitT (SyncStream i p d) (Stream i s (Ticks r t) p d) m ()
 assumeSynchronizedC =
   evalStateC
     (0, 0)
@@ -79,7 +79,7 @@ setTimestampFromDurationsC
      , HasTimestamp a
      , GetTimestamp a ~ ()
      )
-  => Ticks r t -> Conduit a m (SetTimestamp a (Ticks r t))
+  => Ticks r t -> ConduitT a (SetTimestamp a (Ticks r t)) m ()
 setTimestampFromDurationsC t0 = evalStateC t0 (awaitForever go)
   where
     go !sb = lift (state (setTimestampFromDurations sb)) >>= yield
@@ -87,7 +87,7 @@ setTimestampFromDurationsC t0 = evalStateC t0 (awaitForever go)
 -- | Explicitly remove a timestamp, by setting the timestamp to @()@.
 removeTimestampC
   :: (Monad m, HasTimestamp a)
-  => Conduit a m (SetTimestamp a ())
+  => ConduitT a (SetTimestamp a ()) m ()
 removeTimestampC = awaitForever (yield . removeTimestamp)
 
 -- | Recalculate all timestamps in a 'Stream'. This function is strict in its arguments.
@@ -96,5 +96,5 @@ convertTimestampC
      (NFData t, NFData t', CanBeTicks r t, CanBeTicks r' t', Monad m, NFData t')
   => proxy0 '( r, t)
   -> proxy1 '( r', t')
-  -> Conduit (Stream i s (Ticks r t) p c) m (Stream i s (Ticks r' t') p c)
+  -> ConduitT (Stream i s (Ticks r t) p c) (Stream i s (Ticks r' t') p c) m ()
 convertTimestampC _ _ = mapTimestampC' convertTicks

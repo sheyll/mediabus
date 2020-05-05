@@ -125,6 +125,8 @@ instance (CanBeSample (Pcm c t), KnownRate r) =>
       !n = ceiling (tPacket / tSample)
       !tSample = getPeriodDuration (Proxy :: Proxy (Audio r c (Raw t)))
 
+instance CanBeSample (Pcm c t) => Semigroup (Audio r c (Raw t)) where
+  x <> y = pcmMediaBuffer # mappend (x ^. pcmMediaBuffer) (y ^. pcmMediaBuffer)
+
 instance CanBeSample (Pcm c t) => Monoid (Audio r c (Raw t)) where
   mempty = pcmMediaBuffer # mempty
-  mappend x y = pcmMediaBuffer # mappend (x ^. pcmMediaBuffer) (y ^. pcmMediaBuffer)
