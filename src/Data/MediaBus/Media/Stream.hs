@@ -110,6 +110,8 @@ instance
 -- unit long, it can respresent anything ranging from an audio buffer with 20ms
 -- of audio to a single pulse coded audio sample, of course it could also be a
 -- video frame or a chat message.
+--
+-- A 'Frame' can hold a 'Data.MediaBus.Media.Segment'
 data Frame s t c
   = MkFrame
       { -- | The timestamp at which the representation of the
@@ -178,6 +180,13 @@ instance
   getDuration = getDuration . _framePayload
 
 instance
+  HasStaticDuration c =>
+  HasStaticDuration (Frame s t c)
+  where
+  type SetStaticDuration (Frame s t c) pt = Frame s t (SetStaticDuration c pt)
+  type GetStaticDuration (Frame s t c) = GetStaticDuration c
+
+instance
   (Arbitrary c, Arbitrary s, Arbitrary t) =>
   Arbitrary (Frame s t c)
   where
@@ -207,6 +216,20 @@ instance
 -- 'Next' with 'FrameCtx' and 'Frame'.
 --
 -- This a just a newtype wrapper around 'Streamish'
+--
+-- An example for a 'Stream' with the type parameters fully applied:
+--
+-- > Stream
+-- >    RtpSsrc
+-- >    RtpSeqNum
+-- >    (Ticks (Hz 16000) Word64)
+-- >    ()
+-- >    (Segment
+-- >       (640 :/ Hz 16000)
+-- >       (Audio
+-- >          (Hz 16000)
+-- >          Mono
+-- >          (Raw S16)))
 newtype Stream i s t p c
   = MkStream
       { _stream :: Streamish i s t p c

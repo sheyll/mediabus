@@ -86,3 +86,10 @@ instance
   CoerceRate (Discontinous i) (Discontinous j) ri rj
   where
   coerceRate px = over _Got (coerceRate px)
+
+-- instance
+--   (HasStaticDuration c) =>
+--   HasStaticDuration (Discontinous c)
+--   where
+--   type SetStaticDuration (Discontinous c) pt = Discontinous (SetStaticDuration c pt)
+--   type GetStaticDuration (Discontinous c) = GetStaticDuration c

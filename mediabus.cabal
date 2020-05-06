@@ -32,7 +32,7 @@ library
                      , Data.MediaBus.Conduit.Audio.Raw.Resample
                      , Data.MediaBus.Conduit.Discontinous
                      , Data.MediaBus.Conduit.Reorder
-                     , Data.MediaBus.Conduit.RingBuffer
+                     , Data.MediaBus.Conduit.FrameRing
                      , Data.MediaBus.Conduit.Segment
                      , Data.MediaBus.Conduit.Stream
                      , Data.MediaBus.Conduit.SyncStream
@@ -133,7 +133,7 @@ test-suite tests
   other-modules:       Data.MediaBus.Basics.TicksSpec
                      , Data.MediaBus.Conduit.Audio.Raw.ResampleSpec
                      , Data.MediaBus.Conduit.ReorderSpec
-                     , Data.MediaBus.Conduit.RingBufferSpec
+                     , Data.MediaBus.Conduit.FrameRingSpec
                      , Data.MediaBus.Conduit.SegmentSpec
                      , Data.MediaBus.Conduit.SpecUtils
                      , Data.MediaBus.Conduit.StreamSpec
