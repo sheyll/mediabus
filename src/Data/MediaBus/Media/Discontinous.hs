@@ -1,14 +1,24 @@
--- | Discontinous content. Some media streams, like e.g. RTP streams received
--- via UDP, have the characteristic, that some times packages are lost. This
--- module provides a type that is isomorphic to 'Maybe' to indicate that the
--- content for a media frame is missing.
--- It might take some effort to detect missing content, like a jitter buffer, or the comparison of sequence numbers.
+-- | Streams with gaps.
 --
---  TODO: Create a gap detection mechanism, a simple stateful monad that knows the next timestamp etc.
+-- Some media streams are transported via unreliable connections.
+-- For example RTP streams received via UDP.
+--
+-- The transport sometimes loose packages.
+--
+-- This module provides a type that is isomorphic to 'Maybe' to indicate that the
+-- content for a media frame is missing.
+--
+-- It might take some effort to detect missing content,
+-- for example a jitter buffer, that compares sequence numbers.
+--
+-- This, however is not part of this module.
+--
+-- TODO: Create a gap detection mechanism, a simple stateful monad that knows the next timestamp etc.
 module Data.MediaBus.Media.Discontinous
   ( Discontinous (..),
     _Missing,
     _Got,
+    StreamWithGaps,
   )
 where
 
@@ -19,9 +29,14 @@ import Data.MediaBus.Basics.Ticks
 import Data.MediaBus.Media.Channels
 import Data.MediaBus.Media.Media
 import Data.MediaBus.Media.Samples
+import Data.MediaBus.Media.Stream
 import GHC.Generics (Generic)
 
 -- | Content that can be 'Missing'.
+--
+-- This is usually used in a 'Stream' as a wrapper for the 'Frame' payload.
+-- For example:
+-- > fooWithGaps :: Stream SourceId SeqNum Timestamp32 FooCodecInit (Discontinous FooCodecPayload)
 data Discontinous a
   = -- | A place holder for frame content that is missing
     Missing
@@ -86,9 +101,13 @@ instance
   CoerceRate (Discontinous i) (Discontinous j) ri rj
   where
   coerceRate px = over _Got (coerceRate px)
--- instance
---   (HasStaticDuration c) =>
---   HasStaticDuration (Discontinous c)
---   where
---   type SetStaticDuration (Discontinous c) pt = Discontinous (SetStaticDuration c pt)
---   type GetStaticDuration (Discontinous c) = GetStaticDuration c
+
+instance
+   (HasStaticDuration c) =>
+   HasStaticDuration (Discontinous c)
+   where
+   type SetStaticDuration (Discontinous c) pt = Discontinous (SetStaticDuration c pt)
+   type GetStaticDuration (Discontinous c) = GetStaticDuration c
+
+-- | A 'Stream' that has 'Discontinous' payloads.
+type StreamWithGaps i s t p c = Stream i s t p (Discontinous c)

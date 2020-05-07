@@ -19,4 +19,4 @@ concealMissing ::
 concealMissing = mapFrameContentC' go
   where
     go (Got !b) = b
-    go Missing = blank@c -- TODO delete ??
+    go Missing = blank @c -- TODO delete ??

@@ -22,6 +22,7 @@ import Control.Parallel.Strategies
   )
 import Data.Default
 import Data.MediaBus.Basics.Clock
+import Data.MediaBus.Basics.Sequence
 import Data.MediaBus.Basics.Ticks
 import Data.MediaBus.Conduit.Stream
 import Data.MediaBus.Media.Discontinous
@@ -55,17 +56,22 @@ makeLenses ''RingSourceState
 --
 -- Refer to 'frameRingSink' to learn howto put data into the ring
 -- and 'frameRingSource' on how to retreive data.
-newtype FrameRing a
+newtype FrameRing i p c
   = MkFrameRing
-      { _frameRingTBQueue :: TBQueue a
+      { _frameRingTBQueue :: TBQueue (Streamish i () () p (FrameRingPayload c))
       }
+
+
+data FrameRingPayload c =
+    FrameRingPayload {frameRingPayload :: c}
+  | FrameRingOverflow {lostPayload :: c, frameRingPayload :: c}
 
 -- | Create a new 'FrameRing' with an upper bound on the queue length.
 mkFrameRing ::
   (MonadIO m) =>
   Natural ->
   -- ^ Ring Element Count
-  m (FrameRing a)
+  m (FrameRing i p c)
 mkFrameRing qlen =
   MkFrameRing <$> newTBQueueIO qlen
 
@@ -73,9 +79,10 @@ mkFrameRing qlen =
 -- 'FrameRing'. When the queue is full, **drop the oldest element** and push
 -- in the new element, anyway.
 frameRingSink ::
-  (NFData a, MonadIO m) =>
-  FrameRing a ->
-  ConduitT (SyncStream i p a) Void m ()
+  (NFData c,
+  MonadIO m) =>
+  FrameRing i p c ->
+  ConduitT (SyncStream i p c) Void m ()
 frameRingSink (MkFrameRing !ringRef) = awaitForever go
   where
     go !x = do
@@ -83,29 +90,33 @@ frameRingSink (MkFrameRing !ringRef) = awaitForever go
       return ()
       where
         pushInRing !buf' = do
-          isFull <- do
-            !buf <- evaluate $ withStrategy rdeepseq buf'
-            atomically $ do
-              isFull <- isFullTBQueue ringRef
-              when isFull (void $ readTBQueue ringRef)
-              writeTBQueue ringRef buf
-              return isFull
-          when isFull $ return ()
-            -- TODO  "queue full"
+          !buf <- evaluate $ withStrategy rdeepseq buf'
+          atomically $ do
+            isFull <- isFullTBQueue ringRef
+            frpBuf <-
+              if isFull then
+
+                (\lostFrame ->
+                  case lostFrame of
+                    FrameRingPayload lostBuf ->
+                      FrameRingOverflow lostBuf buf
+                    FrameRingOverflow lostBuf2 lostBuf ->
+                      FrameRingOverflow lostBuf buf
+
+                )
+
+                <$> readTBQueue ringRef
+              else
+                return (FrameRingPayload buf)
+            writeTBQueue ringRef frpBuf
 
 -- | Periodically poll a 'FrameRing' and yield the 'Frame's
 -- put into the ring, or 'Missing' otherwise.
 --
 -- When after
-frameRingSource :: forall i a p m .
-  ( Random i,
-    NFData a,
-    NFData p,
-    Default p,
-    HasStaticDuration a,
-    MonadIO m
-  ) =>
-  FrameRing a ->
+frameRingSource ::
+  ( MonadIO m ) =>
+  FrameRing i p c ->
   NominalDiffTime ->
   ConduitT () (SyncStream i p (Discontinous a)) m ()
   --  TODO ConduitT () (Stream i s (Ticks r t) p (AnnotatedFrame (Maybe FrameRingEvent) (Discontinous c))) m ()
