@@ -1,12 +1,11 @@
-resolver: lts-13.13
+resolver: lts-14.7
 
 packages:
 - '.'
 
-extra-deps: 
+extra-deps:
 - bytestring-to-vector-0.3.0.1
 
 flags: {}
 
 extra-package-dbs: []
-

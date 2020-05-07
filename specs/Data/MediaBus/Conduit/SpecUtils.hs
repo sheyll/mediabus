@@ -1,4 +1,4 @@
-module Data.MediaBus.Conduit.SpecUtils  where
+module Data.MediaBus.Conduit.SpecUtils where
 
 import Conduit
 import Control.Lens

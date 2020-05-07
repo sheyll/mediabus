@@ -37,9 +37,7 @@ import UnliftIO
 
 data RingSourceState s t
   = MkRingSourceState
-      { _currentSeqNum :: !s,
-        _currentTicks :: !t,
-        _timeSinceLastInput :: !NominalDiffTime,
+      { _timeSinceLastInput :: !NominalDiffTime,
         _undeflowReported :: !Bool
       }
 
@@ -99,7 +97,7 @@ frameRingSink (MkFrameRing !ringRef) = awaitForever go
 -- put into the ring, or 'Missing' otherwise.
 --
 -- When after
-frameRingSource ::
+frameRingSource :: forall i a p m .
   ( Random i,
     NFData a,
     NFData p,
@@ -108,13 +106,15 @@ frameRingSource ::
     MonadIO m
   ) =>
   FrameRing a ->
+  NominalDiffTime ->
   ConduitT () (SyncStream i p (Discontinous a)) m ()
   --  TODO ConduitT () (Stream i s (Ticks r t) p (AnnotatedFrame (Maybe FrameRingEvent) (Discontinous c))) m ()
-frameRingSource (MkFrameRing ringRef) =
-  evalStateC (MkRingSourceState 0 0 0 True) $ do
+frameRingSource  (MkFrameRing ringRef) pTime =
+  evalStateC (MkRingSourceState 0 True) $ do
     yieldStart
     go
   where
+    pTime = getStaticDuration (Proxy @a)
     -- TODO this breaks when 'frameRingPollInterval < duration c'?
     --      to fix add a 'timePassedSinceLastBufferReceived' parameter to 'go'
     --      when no new from could be read from the queue after waiting for 'dt'
@@ -126,7 +126,6 @@ frameRingSource (MkFrameRing ringRef) =
       res <- liftIO $ race (atomically $ readTBQueue ringRef) sleep
       case res of
         Left buf -> do
-          timeSinceLastInput .= 0
           yieldNextBuffer (Got buf)
         Right dt -> do
           t <- timeSinceLastInput <<+= dt

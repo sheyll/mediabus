@@ -33,11 +33,11 @@ import GHC.Generics (Generic)
 import Test.QuickCheck
 
 -- | Meta information about a media 'Stream'.
-data FrameCtx sourceId sequenceNumber timestamp initSegment
+data FrameCtx streamId sequenceNumber timestamp streamStartPayload
   = MkFrameCtx
       { -- | An identifier for the stream, e.g. a track name
         -- or an RTP SSRC
-        _frameCtxSourceId :: !sourceId,
+        _frameCtxSourceId :: !streamId,
         -- | The start time stamp of a stream all time
         -- stamps in the 'Frame's are relative to this.
         _frameCtxTimestampRef :: !timestamp,
@@ -48,13 +48,13 @@ data FrameCtx sourceId sequenceNumber timestamp initSegment
         -- | An extra field for media type specific extra
         -- information, like the init segment of an ISOBMFF
         -- media.
-        _frameCtxInit :: !initSegment
+        _frameCtxInit :: !streamStartPayload
       }
   deriving (Eq, Ord, Generic)
 
 instance
-  (NFData i, NFData s, NFData t, NFData p) =>
-  NFData (FrameCtx i s t p)
+  (NFData streamId, NFData sequenceNumber, NFData timestamp, NFData streamStartPayload) =>
+  NFData (FrameCtx streamId sequenceNumber timestamp streamStartPayload)
 
 makeLenses ''FrameCtx
 
@@ -112,24 +112,24 @@ instance
 -- video frame or a chat message.
 --
 -- A 'Frame' can hold a 'Data.MediaBus.Media.Segment'
-data Frame s t c
+data Frame sequenceNumber timestamp payload
   = MkFrame
       { -- | The timestamp at which the representation of the
         -- media content in this frame **begins**
-        _frameTimestamp :: !t,
+        _frameTimestamp :: !timestamp,
         -- | The sequence number of that frame, useful to detect
         -- missing frames
-        _frameSeqNum :: !s,
+        _frameSeqNum :: !sequenceNumber,
         -- | The actual (media) content.
-        _framePayload :: !c
+        _framePayload :: !payload
       }
   deriving (Eq, Ord, Generic)
 
 instance
-  (NFData c, NFData s, NFData t) =>
-  NFData (Frame s t c)
+  (NFData payload, NFData sequenceNumber, NFData timestamp) =>
+  NFData (Frame sequenceNumber timestamp payload)
 
-deriving instance Functor (Frame s t)
+deriving instance Functor (Frame sequenceNumber timestamp)
 
 makeLenses ''Frame
 
@@ -230,22 +230,23 @@ instance
 -- >          (Hz 16000)
 -- >          Mono
 -- >          (Raw S16)))
-newtype Stream i s t p c
+newtype Stream streamId sequenceNumber timestamp streamStartPayload payload
   = MkStream
-      { _stream :: Streamish i s t p c
+      { _stream :: Streamish streamId sequenceNumber timestamp streamStartPayload payload
       }
   deriving (Ord, Eq, Arbitrary, Generic)
 
 instance
-  (NFData i, NFData s, NFData t, NFData c, NFData p) =>
-  NFData (Stream i s t p c)
+  (NFData streamId, NFData sequenceNumber, NFData timestamp, NFData payload, NFData streamStartPayload) =>
+  NFData (Stream streamId sequenceNumber timestamp streamStartPayload payload)
 
 -- | This is the type alias that 'Stream' is a newtype wrapper of, see the
 -- description of 'Stream'. This combines the sum type 'Series' which has either 'Start' or
 -- 'Next' with 'FrameCtx' and 'Frame'.
 --
 -- See 'Stream' for the newtype wrapper.
-type Streamish i s t p c = Series (FrameCtx i s t p) (Frame s t c)
+type Streamish streamId sequenceNumber timestamp streamInitPayload payload =
+  Series (FrameCtx streamId sequenceNumber timestamp streamInitPayload) (Frame sequenceNumber timestamp payload)
 
 makeLenses ''Stream
 

@@ -11,7 +11,7 @@
 -- When the library author chooses 'SyncStream', the library users then know,
 -- that the library function relies on a synchronized stream.
 module Data.MediaBus.Media.SyncStream
-  ( type SyncStream,
+  ( SyncStream,
     assumeSynchronized,
     setSequenceNumberAndTimestamp,
   )
@@ -26,17 +26,20 @@ import Data.MediaBus.Media.Stream
 -- when the sequence numbers and time stamps of a 'Stream', and by extension of
 -- a 'Frame' and 'FrameCtx', are always @()@, the 'Frame's of a 'Stream' can
 -- be assumed to be (perfectly) synchronous.
-type SyncStream i p c = Stream i () () p c
+type SyncStream streamId streamStartPayload payload =
+  Stream streamId () () streamStartPayload payload
 
 -- | Convert a 'Stream' to a 'SyncStream' by simply /forgetting/ the sequence
 -- numbers and timestamps of the input. This expresses the assumption that the
 -- 'Frame's are either perfectly lined sequential or that this doesn't matter
 -- at all.
-assumeSynchronized :: Stream i s t p c -> SyncStream i p c
+assumeSynchronized ::
+  Stream streamId s t streamStartPayload payload ->
+  SyncStream streamId streamStartPayload payload
 assumeSynchronized (MkStream (Start (MkFrameCtx i _ _ p))) =
   MkStream (Start (MkFrameCtx i () () p))
-assumeSynchronized (MkStream (Next (MkFrame _ _ c))) =
-  MkStream (Next (MkFrame () () c))
+assumeSynchronized (MkStream (Next (MkFrame _ _ payload))) =
+  MkStream (Next (MkFrame () () payload))
 
 -- | Set sequence numbers and timestamps.
 -- Increment the sequence numbers starting from @0@ for every frame.
@@ -44,13 +47,20 @@ assumeSynchronized (MkStream (Next (MkFrame _ _ c))) =
 -- frame in the stream.
 -- This function has the signature required to turn it into a 'State' monad.
 setSequenceNumberAndTimestamp ::
-  (Num s, CanBeTicks r t, HasDuration c) =>
-  SyncStream i p c ->
-  (s, Ticks r t) ->
-  (Stream i s (Ticks r t) p c, (s, Ticks r t))
+  (Num sequenceNumber, CanBeTicks rate timestamp, HasDuration payload) =>
+  SyncStream streamId streamStartPayload payload ->
+  (sequenceNumber, Ticks rate timestamp) ->
+  ( Stream
+      streamId
+      sequenceNumber
+      (Ticks rate timestamp)
+      streamStartPayload
+      payload,
+    (sequenceNumber, Ticks rate timestamp)
+  )
 setSequenceNumberAndTimestamp (MkStream (Next (MkFrame _t _s !c))) (nextS, nextT) =
   ( MkStream (Next (MkFrame nextT nextS c)),
     (nextS + 1, nextT + getDurationTicks c)
   )
 setSequenceNumberAndTimestamp (MkStream (Start (MkFrameCtx i _t _s p))) (nextS, nextT) =
-  ((MkStream (Start (MkFrameCtx i nextT nextS p))), (nextS, nextT))
+  (MkStream (Start (MkFrameCtx i nextT nextS p)), (nextS, nextT))

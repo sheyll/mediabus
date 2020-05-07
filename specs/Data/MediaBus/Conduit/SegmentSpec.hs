@@ -4,12 +4,12 @@ import Conduit
 import Control.Lens
 import Data.Conduit.List
 import Data.MediaBus
+import Data.MediaBus.Conduit.SpecUtils
 import Data.Proxy
 import qualified Data.Vector.Storable as V
 import Data.Word
 import Test.Hspec
 import Test.QuickCheck
-import Data.MediaBus.Conduit.SpecUtils
 
 spec :: Spec
 spec = describe "segmentC" $ do

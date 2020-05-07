@@ -19,8 +19,8 @@ import Data.MediaBus.Conduit.Audio.Raw.Alaw as X
 import Data.MediaBus.Conduit.Audio.Raw.DebugSink as X
 import Data.MediaBus.Conduit.Audio.Raw.Resample as X
 import Data.MediaBus.Conduit.Discontinous as X
-import Data.MediaBus.Conduit.Reorder as X
 import Data.MediaBus.Conduit.FrameRing as X
+import Data.MediaBus.Conduit.Reorder as X
 import Data.MediaBus.Conduit.Segment as X
 import Data.MediaBus.Conduit.Stream as X
 import Data.MediaBus.Conduit.SyncStream as X
