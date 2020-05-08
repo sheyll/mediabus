@@ -6,6 +6,7 @@ module Data.MediaBus.Conduit.SyncStream
     setSequenceNumberAndTimestampC,
     convertTimestampC,
     setTimestampFromDurationsC,
+    setTimestampFromDurationsC2,
     removeTimestampC,
   )
 where
@@ -89,6 +90,18 @@ setTimestampFromDurationsC ::
 setTimestampFromDurationsC t0 = evalStateC t0 (awaitForever go)
   where
     go !sb = lift (state (setTimestampFromDurations sb)) >>= yield
+
+
+setTimestampFromDurationsC2 ::
+  forall m r t src sn init pl.
+  ( Monad m,
+    CanBeTicks r t,
+    HasDuration pl
+
+  ) =>
+  Ticks r t ->
+  ConduitT (Stream src sn () init pl) (Stream src sn (Ticks r t) init pl) m ()
+setTimestampFromDurationsC2 = setTimestampFromDurationsC
 
 -- | Explicitly remove a timestamp, by setting the timestamp to @()@.
 removeTimestampC ::

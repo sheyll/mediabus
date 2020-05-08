@@ -18,24 +18,24 @@ import Test.QuickCheck
 
 -- | A value of a series is either the 'Start' of that series or the 'Next'
 -- value in a started series.
-data Series a b
-  = Next {_seriesValue :: !b}
-  | Start {_seriesStartValue :: !a}
+data Series start element
+  = Next {_seriesValue :: !element}
+  | Start {_seriesStartValue :: !start}
   deriving (Eq, Generic)
 
 makePrisms ''Series
 
 -- | A simple version of a series, where the 'Start' value has the same type as
 -- the 'Next' value.
-type Series' a = Series a a
+type Series' element = Series element element
 
 instance
-  (NFData a, NFData b) =>
-  NFData (Series a b)
+  (NFData start, NFData elem) =>
+  NFData (Series start elem)
 
 instance
-  (Show a, Show b) =>
-  Show (Series a b)
+  (Show start, Show elem) =>
+  Show (Series start elem)
   where
   showsPrec d (Start !x) =
     showParen (d > 10) $ showString "start: " . showsPrec 11 x
@@ -43,15 +43,15 @@ instance
     showParen (d > 10) $ showString "next: " . showsPrec 11 x
 
 instance
-  (Ord a, Ord b) =>
-  Ord (Series a b)
+  (Ord start, Ord elem) =>
+  Ord (Series start elem)
   where
   compare (Next !l) (Next !r) = compare l r
   compare _ _ = EQ
 
 instance
-  (Arbitrary a, Arbitrary b) =>
-  Arbitrary (Series a b)
+  (Arbitrary start, Arbitrary elem) =>
+  Arbitrary (Series start elem)
   where
   arbitrary = do
     isNext <- choose (0.0, 1.0)
@@ -59,27 +59,27 @@ instance
       then Next <$> arbitrary
       else Start <$> arbitrary
 
-instance Functor (Series a) where
+instance Functor (Series start) where
   fmap = over _Next
 
 instance Bifunctor Series where
   first = over _Start
   second = over _Next
 
--- | A class of types with any kind /start/ and /next/ semantics, not
--- necessarily provided by 'Series'.
-class AsSeries s a b | s -> a, s -> b where
+-- | A class of types with /start/ and /next/ semantics,
+-- just like 'Series'.
+class AsSeries a start elem | a -> start, a -> elem where
   -- | A simple 'Prim' to extract a /start/ value
-  seriesStart' :: Prism' s a
+  seriesStart' :: Prism' a start
 
   -- | A simple 'Prim' to extract a /next/ value
-  seriesNext' :: Prism' s b
+  seriesNext' :: Prism' a elem
 
-instance AsSeries (Either a b) a b where
+instance AsSeries (Either start elem) start elem where
   seriesStart' = _Left
   seriesNext' = _Right
 
-instance AsSeries (Series a b) a b where
+instance AsSeries (Series start elem) start elem where
   seriesNext' = _Next
   seriesStart' = _Start
 

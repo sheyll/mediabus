@@ -1,9 +1,17 @@
--- | Asynchronous execution of conduits. This module contains a set of functions
--- to concurrently execute 'Stream' processing conduits and couple them using
--- 'TBQueue's.
+-- | This module provides the 'FrameRing' data structure.
+--
+-- The ring that acts like a /triple-buffer/ knwon from
+-- traditional graphics programming.
+--
+-- It connects a producer to a consumer via a 'TBQueue',
+-- and allows to use different /threads/.
+--
+-- If the producer lags behind, 'Missing' frames will be issued.
+--
+-- @since 0.5.0.0
 module Data.MediaBus.Conduit.FrameRing
   ( FrameRing (),
-
+    Event(..),
     mkFrameRing,
     frameRingSink,
     frameRingSource,
@@ -23,6 +31,7 @@ import Control.Parallel.Strategies
 import Data.Default
 import Data.MediaBus.Basics.Clock
 import Data.MediaBus.Basics.Sequence
+import Data.MediaBus.Basics.Series
 import Data.MediaBus.Basics.Ticks
 import Data.MediaBus.Conduit.Stream
 import Data.MediaBus.Media.Discontinous
@@ -36,14 +45,6 @@ import System.Random
 import Text.Printf
 import UnliftIO
 
-data RingSourceState s t
-  = MkRingSourceState
-      { _timeSinceLastInput :: !NominalDiffTime,
-        _undeflowReported :: !Bool
-      }
-
-makeLenses ''RingSourceState
-
 -- | A ring like queue, to provide a constant flow of frames.
 --
 -- This helps to decouple concurrent conduits carrying
@@ -56,22 +57,34 @@ makeLenses ''RingSourceState
 --
 -- Refer to 'frameRingSink' to learn howto put data into the ring
 -- and 'frameRingSource' on how to retreive data.
-newtype FrameRing i p c
+newtype FrameRing a
   = MkFrameRing
-      { _frameRingTBQueue :: TBQueue (Streamish i () () p (FrameRingPayload c))
+      { _frameRingTBQueue
+            :: TBQueue
+                (SinkOverflow a,
+                 a
+                )
       }
 
+-- | Internal helper
+newtype SinkOverflow a =
+    SinkOverflow { overwrittenPayload :: Maybe a }
 
-data FrameRingPayload c =
-    FrameRingPayload {frameRingPayload :: c}
-  | FrameRingOverflow {lostPayload :: c, frameRingPayload :: c}
+-- | A 'FrameRing' overflow or underflow event.
+--
+-- @since 0.5.0.0
+data Event c =
+    Overflow { lostPayload :: c}
+    -- ^ The ring was too full and the first entry was overwritten by the next.
+  | Underflow
+    -- ^ The ring was empty for too long.
 
 -- | Create a new 'FrameRing' with an upper bound on the queue length.
 mkFrameRing ::
   (MonadIO m) =>
   Natural ->
   -- ^ Ring Element Count
-  m (FrameRing i p c)
+  m (FrameRing a)
 mkFrameRing qlen =
   MkFrameRing <$> newTBQueueIO qlen
 
@@ -79,53 +92,48 @@ mkFrameRing qlen =
 -- 'FrameRing'. When the queue is full, **drop the oldest element** and push
 -- in the new element, anyway.
 frameRingSink ::
-  (NFData c,
-  MonadIO m) =>
-  FrameRing i p c ->
-  ConduitT (SyncStream i p c) Void m ()
-frameRingSink (MkFrameRing !ringRef) = awaitForever go
+  (NFData sourceId, NFData streamStartPayload, NFData payload, MonadIO m) =>
+  FrameRing (SyncStream sourceId streamStartPayload payload) ->
+  ConduitT (SyncStream sourceId streamStartPayload payload) Void m ()
+frameRingSink (MkFrameRing !ringRef) = awaitForever pushInRing
   where
-    go !x = do
-      maybe (return ()) pushInRing (x ^? eachFramePayload)
-      return ()
-      where
-        pushInRing !buf' = do
-          !buf <- evaluate $ withStrategy rdeepseq buf'
-          atomically $ do
-            isFull <- isFullTBQueue ringRef
-            frpBuf <-
-              if isFull then
-
-                (\lostFrame ->
-                  case lostFrame of
-                    FrameRingPayload lostBuf ->
-                      FrameRingOverflow lostBuf buf
-                    FrameRingOverflow lostBuf2 lostBuf ->
-                      FrameRingOverflow lostBuf buf
-
-                )
-
+    pushInRing !buf' = do
+      !buf <- evaluate (withStrategy rdeepseq buf')
+      atomically (do
+        isFull <- isFullTBQueue ringRef
+        overflow <-
+          if isFull then
+            SinkOverflow . Just . snd
                 <$> readTBQueue ringRef
-              else
-                return (FrameRingPayload buf)
-            writeTBQueue ringRef frpBuf
+          else return (SinkOverflow Nothing)
+
+        writeTBQueue ringRef (overflow, buf))
+
+
+-- | Internal helper.
+data SourceState = MkSourceState
 
 -- | Periodically poll a 'FrameRing' and yield the 'Frame's
 -- put into the ring, or 'Missing' otherwise.
 --
--- When after
-frameRingSource ::
-  ( MonadIO m ) =>
-  FrameRing i p c ->
-  NominalDiffTime ->
-  ConduitT () (SyncStream i p (Discontinous a)) m ()
+-- Pass frames through.
+-- If a start frame is received, pass it through.
+-- If no frames are received for
+frameRingSource :: forall m sourceId streamStartPayload payload.
+  ( MonadIO m, HasStaticDuration payload ) =>
+  FrameRing (SyncStream sourceId streamStartPayload payload) ->
+  ConduitT () (SyncStream sourceId streamStartPayload (SinkOverflow  payload)) m ()
   --  TODO ConduitT () (Stream i s (Ticks r t) p (AnnotatedFrame (Maybe FrameRingEvent) (Discontinous c))) m ()
-frameRingSource  (MkFrameRing ringRef) pTime =
-  evalStateC (MkRingSourceState 0 True) $ do
+frameRingSource  (MkFrameRing ringRef) =
+  do
     yieldStart
     go
   where
-    pTime = getStaticDuration (Proxy @a)
+    pTime = getStaticDuration (Proxy @payload)
+
+    pollIntervallMicros :: Ticks (Hz 1000000) Int
+    pollIntervallMicros = nominalDiffTime # pTime
+
     -- TODO this breaks when 'frameRingPollInterval < duration c'?
     --      to fix add a 'timePassedSinceLastBufferReceived' parameter to 'go'
     --      when no new from could be read from the queue after waiting for 'dt'
@@ -139,8 +147,7 @@ frameRingSource  (MkFrameRing ringRef) pTime =
         Left buf -> do
           yieldNextBuffer (Got buf)
         Right dt -> do
-          t <- timeSinceLastInput <<+= dt
-          when (pTime < t) yieldMissing
+          yieldMissing
       go
 
     sleep =
@@ -152,28 +159,12 @@ frameRingSource  (MkFrameRing ringRef) pTime =
             return (diffTime t1 t0 ^. utcClockTimeDiff)
         )
         where
-          pollIntervallMicros :: Ticks (Hz 1000000) Int
-          pollIntervallMicros = nominalDiffTime # pollIntervall
-
     yieldStart =
-      ( MkFrameCtx
-          <$> liftIO randomIO
-          <*> use currentTicks
-          <*> use currentSeqNum
-          <*> pure def
-      )
-        >>= yieldStartFrameCtx
+      error "TODO" >>= yieldStartFrameCtx
 
-    yieldNextBuffer !buf = do
-      let !bufferDuration = nominalDiffTime # getDuration buf
-      !ts <- currentTicks <<+= bufferDuration
-      !sn <- currentSeqNum <<+= 1
-      frm <- evaluate (withStrategy rdeepseq $ MkFrame ts sn buf)
-      yieldNextFrame frm
+    yieldNextBuffer !buf =
+      yieldNextFrame (error "TODO 2")
 
 
-    yieldMissing = do
-      t <- use timeSinceLastInput
-      when (pTime < t) $ do
-        timeSinceLastInput -= pTime
-        yieldNextBuffer Missing
+    yieldMissing =
+      yieldNextBuffer Missing
