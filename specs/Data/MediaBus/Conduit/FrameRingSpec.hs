@@ -16,8 +16,7 @@ spec =
 
     describe "basics"
       $ do
-           it "can be created with mkFrameRing" $ do
-             void $ mkFrameRing @IO @() 1 0.1
+           it "can be created with mkFrameRing" pending
 
 
            it "passes a single frame from a frameRingSink to a frameRingSource"

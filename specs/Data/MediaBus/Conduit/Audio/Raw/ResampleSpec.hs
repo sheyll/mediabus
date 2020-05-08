@@ -54,7 +54,7 @@ singleFrameFromList x =
   mapOutput
     (MkStream . Next)
     ( mapOutput (MkFrame () def) (yield (pcmMediaBuffer # mediaBufferFromList x))
-        .| setTimestampFromDurationsC2 0
+        .| setTimestampFromDurationsC 0
     )
 
 framesFromLists ::
