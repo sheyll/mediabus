@@ -14,7 +14,6 @@ import Debug.Trace
 import Test.Hspec
 import Test.QuickCheck
 
-
 -- Behaviour:
 
 --   If the ratio of the duration between frame arrivals and the duration
@@ -25,7 +24,20 @@ import Test.QuickCheck
 --   then it takes 1.2 times as long to receive than to play a frame.
 --
 --   A full frame is lost every ? frames.
---     frameDuration/dt_arrive
+--     dt_arrive*n = frameDuration*(n + 1)
+--       -> :n ->
+--     dt_arrive = frameDuration*(n+1)/n
+--     dt_arrive = (frameDuration*n+frameDuration)/n
+--     dt_arrive = frameDuration*n/n+frameDuration/n
+--     dt_arrive = frameDuration+frameDuration/n
+--     dt_arrive - frameDuration = frameDuration/n
+--     n*(dt_arrive - frameDuration) = frameDuration
+--     n = frameDuration/(dt_arrive - frameDuration)
+--
+--     1. wait until now+frameDuration or first frame
+--     2. use the time when the first frame arrived as start time: tStart
+--     3. wait for the next packet
+
 --   In order to reduce fragmentation as much as possible, the ring polling thread would need to
 --   delay for 1 frame (where it would send 1 frame of silence) and could then send 4
 --
