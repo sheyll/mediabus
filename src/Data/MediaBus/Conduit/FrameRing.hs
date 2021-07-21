@@ -3,7 +3,6 @@
 -- 'TBQueue's.
 module Data.MediaBus.Conduit.FrameRing
   ( FrameRing (),
-
     mkFrameRing,
     frameRingSink,
     frameRingSource,
@@ -21,8 +20,9 @@ import Control.Parallel.Strategies
     withStrategy,
   )
 import Data.Default
-import Data.MediaBus.Basics.Clock
+import Data.Fixed (Fixed (..))
 import Data.MediaBus.Basics.Sequence
+import Data.MediaBus.Basics.Series
 import Data.MediaBus.Basics.Ticks
 import Data.MediaBus.Conduit.Stream
 import Data.MediaBus.Media.Discontinous
@@ -38,33 +38,24 @@ import UnliftIO
 
 data RingSourceState s t
   = MkRingSourceState
-      { _timeSinceLastInput :: !NominalDiffTime,
-        _undeflowReported :: !Bool
+      { _lastWakeupTime :: !UTCTime,
+        _nextYieldTime :: !NominalDiffTime
       }
 
 makeLenses ''RingSourceState
 
--- | A ring like queue, to provide a constant flow of frames.
---
--- This helps to decouple concurrent conduits carrying
--- 'Stream's.
+-- | A queue, that decouples content generation and consumption
+-- such that two threads can simultanously produce and consume
+-- frames.
 --
 -- The implementation uses bounded queues 'TBQueue'.
---
--- The internal queue can be filled from one thread and consumed by
--- another thread.
 --
 -- Refer to 'frameRingSink' to learn howto put data into the ring
 -- and 'frameRingSource' on how to retreive data.
 newtype FrameRing i p c
   = MkFrameRing
-      { _frameRingTBQueue :: TBQueue (Streamish i () () p (FrameRingPayload c))
+      { _frameRingTBQueue :: TBQueue (SyncStream i p c)
       }
-
-
-data FrameRingPayload c =
-    FrameRingPayload {frameRingPayload :: c}
-  | FrameRingOverflow {lostPayload :: c, frameRingPayload :: c}
 
 -- | Create a new 'FrameRing' with an upper bound on the queue length.
 mkFrameRing ::
@@ -75,105 +66,100 @@ mkFrameRing ::
 mkFrameRing qlen =
   MkFrameRing <$> newTBQueueIO qlen
 
--- | Consume the 'Frame's of a 'Stream' and write them into a
--- 'FrameRing'. When the queue is full, **drop the oldest element** and push
--- in the new element, anyway.
+-- | Consume a 'SyncStream' and put each value into a 'FrameRing'.
+-- When the ring is full, **drop the oldest** element that is not a
+-- 'Start' value, unless the second oldest is also a 'Start' value.
+-- If the queue length is 1 then the new value will not be written
+-- as long a the 'Start' value is not retreived.
 frameRingSink ::
   (NFData c,
   MonadIO m) =>
   FrameRing i p c ->
   ConduitT (SyncStream i p c) Void m ()
-frameRingSink (MkFrameRing !ringRef) = awaitForever go
+frameRingSink (MkFrameRing !ringRef) = awaitForever pushInRing
   where
-    go !x = do
-      maybe (return ()) pushInRing (x ^? eachFramePayload)
-      return ()
-      where
-        pushInRing !buf' = do
-          !buf <- evaluate $ withStrategy rdeepseq buf'
-          atomically $ do
-            isFull <- isFullTBQueue ringRef
-            frpBuf <-
-              if isFull then
-
-                (\lostFrame ->
-                  case lostFrame of
-                    FrameRingPayload lostBuf ->
-                      FrameRingOverflow lostBuf buf
-                    FrameRingOverflow lostBuf2 lostBuf ->
-                      FrameRingOverflow lostBuf buf
-
-                )
-
-                <$> readTBQueue ringRef
-              else
-                return (FrameRingPayload buf)
-            writeTBQueue ringRef frpBuf
+    pushInRing !newest' = do
+      newest <- evaluate $ withStrategy rdeepseq newest'
+      atomically $ do
+        isFull <- isFullTBQueue ringRef
+        when isFull $ do
+          oldest <- readTBQueue ringRef
+          case oldest of
+            MkStream (Start _) -> do
+              isEmpty <- isEmptyTBQueue ringRef
+              if isEmpty
+                then
+                  writeTBQueue ringRef $
+                  case newest of
+                    MkStream (Next _) ->
+                      oldest -- drop the new frame
+                    MkStream (Start _) ->
+                      newest -- drop the old frame
+                else do
+                  secondOldest <- readTBQueue ringRef
+                  case secondOldest of
+                    MkStream (Start _) ->
+                      unGetTBQueue ringRef secondOldest
+                    MkStream (Next _) ->
+                      unGetTBQueue ringRef oldest
+                  writeTBQueue ringRef newest
+            MkStream (Next _) ->
+              writeTBQueue ringRef newest
 
 -- | Periodically poll a 'FrameRing' and yield the 'Frame's
 -- put into the ring, or 'Missing' otherwise.
 --
--- When after
+-- The output of the conduit is a 'SyncStream', i.e. a stream
+-- without sequence number and timestamps.
 frameRingSource ::
+  forall i p c m.
   ( MonadIO m ) =>
   FrameRing i p c ->
   NominalDiffTime ->
-  ConduitT () (SyncStream i p (Discontinous a)) m ()
-  --  TODO ConduitT () (Stream i s (Ticks r t) p (AnnotatedFrame (Maybe FrameRingEvent) (Discontinous c))) m ()
-frameRingSource  (MkFrameRing ringRef) pTime =
-  evalStateC (MkRingSourceState 0 True) $ do
-    yieldStart
-    go
-  where
-    pTime = getStaticDuration (Proxy @a)
-    -- TODO this breaks when 'frameRingPollInterval < duration c'?
-    --      to fix add a 'timePassedSinceLastBufferReceived' parameter to 'go'
-    --      when no new from could be read from the queue after waiting for 'dt'
-    --      seconds, the time waited is added to 'frameRingPollInterval'
-    --      and if 'frameRingPollIntervall' is greater than the 'duration of c'
-    --      a 'Missing' is yielded and 'duration of c' is subtracted from
-    --      'timePassedSinceLastBufferReceived'.
-    go = do
-      res <- liftIO $ race (atomically $ readTBQueue ringRef) sleep
-      case res of
-        Left buf -> do
-          yieldNextBuffer (Got buf)
-        Right dt -> do
-          t <- timeSinceLastInput <<+= dt
-          when (pTime < t) yieldMissing
-      go
+  ConduitT () (SyncStream i p (Discontinous c)) m ()
+frameRingSource (MkFrameRing !ringRef) !defaultPacketDuration = do
+  yieldStart
+  !tStart <- liftIO getCurrentTime
+  go tStart (MkRingSourceState tStart 0)
+   where
 
-    sleep =
-      liftIO
-        ( do
-            !(t0 :: ClockTime UtcClock) <- now
-            threadDelay (_ticks pollIntervallMicros)
-            !t1 <- now
-            return (diffTime t1 t0 ^. utcClockTimeDiff)
-        )
-        where
-          pollIntervallMicros :: Ticks (Hz 1000000) Int
-          pollIntervallMicros = nominalDiffTime # pollIntervall
+    yieldStart = do
+      !ssrc <- liftIO randomIO
+      yieldStartFrameCtx ( MkFrameCtx ssrc def def def )
 
-    yieldStart =
-      ( MkFrameCtx
-          <$> liftIO randomIO
-          <*> use currentTicks
-          <*> use currentSeqNum
-          <*> pure def
-      )
-        >>= yieldStartFrameCtx
+    go !tStart !st = do
+      let !tNext = addUTCTime (st ^. nextYieldTime) tStart
+      let !tLast = st ^. lastWakeupTime
+      let (MkFixed !dPicos) = nominalDiffTimeToSeconds (max (diffUTCTime tNext tLast) minJitter)
+          !dMicros = fromIntegral (dPicos `div` 1000000)
+      liftIO (threadDelay dMicros)
+      tWakeup <- liftIO getCurrentTime
+      let !dtWakeup = diffUTCTime tNext tWakeup
+      let !isEarlyWakeup = dtWakeup > maxJitter
+      let !st' = st & lastWakeupTime .~ tWakeup
+      if isEarlyWakeup then
+         go tStart st'
+       else do
+         !currentPacketDuration <- nextFrame
+         let st'' = st' & nextYieldTime +~ currentPacketDuration
+         go tStart st''
 
-    yieldNextBuffer !buf = do
-      let !bufferDuration = nominalDiffTime # getDuration buf
-      !ts <- currentTicks <<+= bufferDuration
-      !sn <- currentSeqNum <<+= 1
-      frm <- evaluate (withStrategy rdeepseq $ MkFrame ts sn buf)
-      yieldNextFrame frm
+    nextFrame = do
+      !bufs <- liftIO $ atomically $ tryReadTBQueue ringRef
+      case bufs of
+        Just (MkStream !buf) ->
+          case buf of
+            Next !x -> do
+              yieldNextFrame (MkFrame def def (Got <$> x))
+              return (getDuration x)
+            Start ( MkFrameCtx ssrc _ _ p ) -> do -- Start frame
+              yieldStartFrameCtx ( MkFrameCtx ssrc def def p )
+              return 0
+        Nothing ->
+          yieldNextFrame (MkFrame def def Missing)
+          return missingDuration
 
-
-    yieldMissing = do
-      t <- use timeSinceLastInput
-      when (pTime < t) $ do
-        timeSinceLastInput -= pTime
-        yieldNextBuffer Missing
+    minJitter, maxJitter, missingDuration :: NominalDiffTime
+    minJitter = defaultPacketDuration / 8
+    maxJitter = defaultPacketDuration / 2
+    missingDuration = getStaticDuration (Proxy @c)
