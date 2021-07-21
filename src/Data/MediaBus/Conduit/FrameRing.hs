@@ -12,7 +12,7 @@ where
 import Conduit
 import Control.Concurrent (threadDelay)
 import Control.Lens
-import Control.Monad.Logger
+import Control.Monad.Logger()
 import Control.Monad.State
 import Control.Parallel.Strategies
   ( NFData,
@@ -21,7 +21,7 @@ import Control.Parallel.Strategies
   )
 import Data.Default
 import Data.Fixed (Fixed (..))
-import Data.MediaBus.Basics.Sequence
+import Data.MediaBus.Basics.Sequence()
 import Data.MediaBus.Basics.Series
 import Data.MediaBus.Basics.Ticks
 import Data.MediaBus.Conduit.Stream
@@ -29,11 +29,11 @@ import Data.MediaBus.Media.Discontinous
 import Data.MediaBus.Media.SyncStream
 import Data.MediaBus.Media.Stream
 import Data.Proxy
-import Data.String
+import Data.String()
 import Data.Time.Clock
 import Numeric.Natural
 import System.Random
-import Text.Printf
+import Text.Printf()
 import UnliftIO
 
 data RingSourceState s t
@@ -61,7 +61,6 @@ newtype FrameRing i p c
 mkFrameRing ::
   (MonadIO m) =>
   Natural ->
-  -- ^ Ring Element Count
   m (FrameRing i p c)
 mkFrameRing qlen =
   MkFrameRing <$> newTBQueueIO qlen
@@ -72,8 +71,7 @@ mkFrameRing qlen =
 -- If the queue length is 1 then the new value will not be written
 -- as long a the 'Start' value is not retreived.
 frameRingSink ::
-  (NFData c,
-  MonadIO m) =>
+  (NFData c, NFData i, NFData p, MonadIO m) =>
   FrameRing i p c ->
   ConduitT (SyncStream i p c) Void m ()
 frameRingSink (MkFrameRing !ringRef) = awaitForever pushInRing
@@ -113,7 +111,7 @@ frameRingSink (MkFrameRing !ringRef) = awaitForever pushInRing
 -- without sequence number and timestamps.
 frameRingSource ::
   forall i p c m.
-  ( MonadIO m ) =>
+  ( MonadIO m, HasDuration c, Random i, Default p) =>
   FrameRing i p c ->
   NominalDiffTime ->
   ConduitT () (SyncStream i p (Discontinous c)) m ()
@@ -149,17 +147,17 @@ frameRingSource (MkFrameRing !ringRef) !defaultPacketDuration = do
       case bufs of
         Just (MkStream !buf) ->
           case buf of
-            Next !x -> do
-              yieldNextFrame (MkFrame def def (Got <$> x))
+            Next (MkFrame _ _ x) -> do
+              yieldNextFrame (MkFrame def def (Got x))
               return (getDuration x)
             Start ( MkFrameCtx ssrc _ _ p ) -> do -- Start frame
               yieldStartFrameCtx ( MkFrameCtx ssrc def def p )
               return 0
-        Nothing ->
+        Nothing -> do
           yieldNextFrame (MkFrame def def Missing)
           return missingDuration
 
     minJitter, maxJitter, missingDuration :: NominalDiffTime
     minJitter = defaultPacketDuration / 8
     maxJitter = defaultPacketDuration / 2
-    missingDuration = getStaticDuration (Proxy @c)
+    missingDuration = defaultPacketDuration

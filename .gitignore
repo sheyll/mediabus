@@ -18,6 +18,7 @@
 src/**/*.c
 /dist/
 /dist-new/
+/dist-newstyle/
 .vscode/
 /cabal.config
 *.aux
