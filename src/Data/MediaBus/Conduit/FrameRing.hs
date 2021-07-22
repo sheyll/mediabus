@@ -104,19 +104,17 @@ frameRingSink (MkFrameRing !ringRef) = awaitForever pushInRing
             case newest of
               MkStream (Next _) ->
                 writeTBQueue ringRef newest
-              MkStream (Start newestStart) -> do
+              MkStream (Start _newestStart) -> do
                 prevs <- flushTBQueue ringRef
                 case reverse prevs of
-                  [] ->
-                    writeTBQueue ringRef newest
                   (MkStream (Start _):rest) -> do
-                    mapM_ (writeTBQueue ringRef) rest
-                    writeTBQueue ringRef newest
+                    mapM_ (unGetTBQueue ringRef) rest
                     -- if the most recent and the previous values are both start frames
                     -- replace the previous value
                   _ -> do
-                    mapM_ (unGetTBQueue ringRef) prevs
-                    unGetTBQueue ringRef newest
+                    mapM_ (writeTBQueue ringRef) prevs
+
+                writeTBQueue ringRef newest
 
 
 -- | Periodically poll a 'FrameRing' and yield the 'Frame's

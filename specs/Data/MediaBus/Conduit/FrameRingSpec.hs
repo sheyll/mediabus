@@ -86,14 +86,14 @@ spec =
               f i = MkStream (Next (MkFrame def def (FP (fromIntegral i + review nominalDiffTime duration))))
               s i = MkStream (Start (MkFrameCtx i def def def))
               -- input = [s,s,f,f,f,s,f,f,s,s,s,s,f]
-              input = zipWith ($) [s,s,f,f,f,s,f,f] [1..]
+              input = zipWith ($) [s,s,f,f,f,s,f,f,s,s,s,s] [1..]
             r <- mkFrameRing @IO (fromIntegral (length input))
             let
               f',s' :: Int -> SyncStream Int () (Discontinous FakePayload)
               f' i = MkStream (Next (MkFrame def def (Got (FP (fromIntegral i + review nominalDiffTime duration)))))
               s' i = MkStream (Start (MkFrameCtx i def def def))
               -- expected = [s',f',f',f',s',f',f',s',f']
-              expected = [s' 2, f' 3, f' 4, f' 5, s' 6, f' 7, f' 8]
+              expected = [s' 2, f' 3, f' 4, f' 5, s' 6, f' 7, f' 8, s' 12]
             let
               sink = frameRingSink r
               source = frameRingSource r duration
