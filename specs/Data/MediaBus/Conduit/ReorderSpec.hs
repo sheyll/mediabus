@@ -24,20 +24,20 @@ spec =
                   (reorderFramesBySeqNumC 3)
                 .| consume
             )
-    it "yields at least one 'Start' for each incoming 'Start'"
-      $ property
-      $ \inputs ->
-        let countStarts =
-              foldr
-                ( \x n ->
-                    case x of
-                      MkStream (Start _) -> n + 1
-                      MkStream (Next _) -> n
-                )
-                0
-         in countStarts (runC inputs) `shouldSatisfy` (>= countStarts inputs)
+    it "yields at least one 'Start' for each incoming 'Start'" $
+      property $
+        \inputs ->
+          let countStarts =
+                foldr
+                  ( \x n ->
+                      case x of
+                        MkStream (Start _) -> n + 1
+                        MkStream (Next _) -> n
+                  )
+                  0
+           in countStarts (runC inputs) `shouldSatisfy` (>= countStarts inputs)
     it "yields exactly the given input if the input is ordered and gap-free" $
-      let inputs = [startFrame 0] ++ [nextFrame x | x <- [0 .. 10]]
+      let inputs = startFrame 0 : [nextFrame x | x <- [0 .. 10]]
        in runC inputs `shouldBe` inputs
     it "reorders out of order packets (1)" $
       let inputs =
@@ -141,23 +141,23 @@ spec =
               nextFrame 52
             ]
        in runC inputs `shouldBe` expected
-    it "yields monotone increasing frames higher than the start-frame"
-      $ property
-      $ \inputs ->
-        let os = runC inputs
-         in when
-              (not (isMonoIncreasingAndHigherThanStartSeqNum os))
-              ( trace
-                  ( unlines $
-                      ( (("IN:   " ++) <$> show <$> inputs)
-                          ++ ( ("OUT:  " ++) <$> show
-                                 <$> os
-                             )
-                      )
-                  )
-                  os
-                  `shouldSatisfy` isMonoIncreasingAndHigherThanStartSeqNum
-              )
+    it "yields monotone increasing frames higher than the start-frame" $
+      property $
+        \inputs ->
+          let os = runC inputs
+           in unless
+                (isMonoIncreasingAndHigherThanStartSeqNum os)
+                ( trace
+                    ( unlines
+                        ( (("IN:   " ++) . show <$> inputs)
+                            ++ ( ("OUT:  " ++) . show
+                                   <$> os
+                               )
+                        )
+                    )
+                    os
+                    `shouldSatisfy` isMonoIncreasingAndHigherThanStartSeqNum
+                )
 
 isMonoIncreasingAndHigherThanStartSeqNum ::
   [Stream () TestSeqNumType () () ()] ->

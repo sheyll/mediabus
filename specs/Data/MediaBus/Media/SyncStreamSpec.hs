@@ -10,15 +10,7 @@ import Data.MediaBus
 import Debug.Trace
 import Test.Hspec
 import Test.QuickCheck
-
-newtype FakePayload
-  = FP
-      { fakeDuration :: Ticks64At8000
-      }
-  deriving (Eq, Show, Num, Arbitrary, Ord)
-
-instance HasDuration FakePayload where
-  getDuration = view (to fakeDuration . nominalDiffTime)
+import FakePayload
 
 spec :: Spec
 spec =

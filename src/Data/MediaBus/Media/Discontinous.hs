@@ -42,7 +42,7 @@ data Discontinous a
     Missing
   | -- | Available content
     Got !a
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq, Ord, Functor)
 
 instance
   NFData a =>

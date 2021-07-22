@@ -31,6 +31,7 @@ import Data.MediaBus.Media.Channels
 import Data.MediaBus.Media.Media
 import GHC.Generics (Generic)
 import Test.QuickCheck
+import Data.Bifunctor
 
 -- | Meta information about a media 'Stream'.
 data FrameCtx streamId sequenceNumber timestamp streamStartPayload
@@ -50,7 +51,7 @@ data FrameCtx streamId sequenceNumber timestamp streamStartPayload
         -- media.
         _frameCtxInit :: !streamStartPayload
       }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Functor)
 
 instance
   (NFData streamId, NFData sequenceNumber, NFData timestamp, NFData streamStartPayload) =>
@@ -234,7 +235,7 @@ newtype Stream streamId sequenceNumber timestamp streamStartPayload payload
   = MkStream
       { _stream :: Streamish streamId sequenceNumber timestamp streamStartPayload payload
       }
-  deriving (Ord, Eq, Arbitrary, Generic)
+  deriving (Ord, Eq, Arbitrary, Generic, Functor)
 
 instance
   (NFData streamId, NFData sequenceNumber, NFData timestamp, NFData payload, NFData streamStartPayload) =>
@@ -249,6 +250,10 @@ type Streamish streamId sequenceNumber timestamp streamInitPayload payload =
   Series (FrameCtx streamId sequenceNumber timestamp streamInitPayload) (Frame sequenceNumber timestamp payload)
 
 makeLenses ''Stream
+
+instance Bifunctor (Stream ssrc sn ts) where
+  first f = MkStream . over _Start (fmap f) . _stream
+  second f = MkStream . over _Next (fmap f) . _stream
 
 instance
   EachChannel (Frame s t c) (Frame s t c') =>

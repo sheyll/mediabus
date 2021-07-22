@@ -55,7 +55,7 @@ newtype ALittleOutOfOrder
 
 instance Arbitrary ALittleOutOfOrder where
   arbitrary = do
-    start <- (MkStream . Start) <$> arbitrary
+    start <- MkStream . Start <$> arbitrary
     (len :: Int) <- arbitrary
     MkALittleOutOfOrder <$> loop (start ^. seqNum) (len + 10) [start]
     where

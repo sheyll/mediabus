@@ -139,6 +139,7 @@ test-suite tests
                      , Data.MediaBus.Conduit.StreamSpec
                      , Data.MediaBus.Media.BufferSpec
                      , Data.MediaBus.Media.SyncStreamSpec
+                     , FakePayload
   default-language:    Haskell2010
 
   -- HACK make cabal test work in nix-shell

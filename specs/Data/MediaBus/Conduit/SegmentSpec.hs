@@ -1,13 +1,8 @@
 module Data.MediaBus.Conduit.SegmentSpec (spec) where
 
-import Conduit
 import Control.Lens
-import Data.Conduit.List
 import Data.MediaBus
 import Data.MediaBus.Conduit.SpecUtils
-import Data.Proxy
-import qualified Data.Vector.Storable as V
-import Data.Word
 import Test.Hspec
 import Test.QuickCheck
 
