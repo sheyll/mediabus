@@ -13,7 +13,6 @@ import Control.Lens
 import Data.Time.Clock (NominalDiffTime)
 import Control.Concurrent (threadDelay)
 import Test.QuickCheck
-import Data.Traversable (for)
 
 spec :: Spec
 spec =
@@ -53,7 +52,7 @@ spec =
               source = frameRingSource r 0.02
             (_, Just out0) <- concurrently
               (connect (yield testStartFrame) sink)
-              (runConduit (source .| await))
+              (runConduit (source .| do { void await; await }))
             out0 `shouldBe` Missing <$ testStartFrame
 
         it
@@ -66,8 +65,7 @@ spec =
               f3 = MkStream (Next (MkFrame def def (FP (3 + review nominalDiffTime duration))))
               sink = frameRingSink r
               duration :: NominalDiffTime
-              duration = 0.02
-              durationMicros = 20_000_000
+              duration = 0.001
               source = frameRingSource r duration
             (_, [_, out1,out2,out3]) <- concurrently
               (connect (yieldMany [f1,f2,f3]) sink)
@@ -76,35 +74,46 @@ spec =
             out2 `shouldBe` Got <$> f2
             out3 `shouldBe` Got <$> f3
 
-        it "when the queue does not overflow, for input [S,S,F,F,F,S,F,F,S,S,S,S,F] it outputs [S,F,F,F,S,F,F,S,F]" $ do
+        it "when the ring size is > 1 and no overflow happens, all input packets are forwarded through the ring" $
+          property $ \inputsBool (Positive qLen) ->
+           qLen >= 2 && qLen > length inputsBool ==> ioProperty $ do
             let
               duration :: NominalDiffTime
-              duration = 0.02
-              durationMicros = 20_000_000
+              duration = 0.001
             let
               f,s :: Int -> SyncStream Int () FakePayload
               f i = MkStream (Next (MkFrame def def (FP (fromIntegral i + review nominalDiffTime duration))))
               s i = MkStream (Start (MkFrameCtx i def def def))
-              -- input = [s,s,f,f,f,s,f,f,s,s,s,s,f]
-              input = zipWith ($) [s,s,f,f,f,s,f,f,s,s,s,s] [1..]
-            r <- mkFrameRing @IO (fromIntegral (length input))
+              inputsSF = take (length inputsBool) (map (\isStart -> if isStart then s else f) inputsBool)
+              input = zipWith ($) inputsSF [1..]
+            r <- mkFrameRing @IO (fromIntegral qLen)
             let
               f',s' :: Int -> SyncStream Int () (Discontinous FakePayload)
               f' i = MkStream (Next (MkFrame def def (Got (FP (fromIntegral i + review nominalDiffTime duration)))))
               s' i = MkStream (Start (MkFrameCtx i def def def))
-              -- expected = [s',f',f',f',s',f',f',s',f']
-              expected = [s' 2, f' 3, f' 4, f' 5, s' 6, f' 7, f' 8, s' 12]
+              expectedSF = take (length inputsBool) (map (\isStart -> if isStart then s' else f') inputsBool)
+              expected = zipWith ($) expectedSF [1..]
             let
               sink = frameRingSink r
               source = frameRingSource r duration
             connect (yieldMany input) sink
-            outputs <- runConduit (source .| Conduit.takeExactlyC (length expected) sinkList)
-            outputs `shouldBe` expected
+            outputs <- runConduit (source .| Conduit.takeExactlyC (length expected + 1) sinkList)
+            drop 1 outputs `shouldBe` expected
 
-    describe "underflow" $
+    describe "underflow" $ do
+      it "constantly generates Missing frames if no input is send" $ property $
+        \(Positive qLen) (Positive outputLen0) ->  qLen > 1 ==> ioProperty $ do
+          let outputLen = qLen + outputLen0
+          r <- mkFrameRing @IO (fromIntegral qLen)
+          let source = frameRingSource r 0.001
+              missing :: SyncStream Int () (Discontinous FakePayload)
+              missing = MkStream (Next (MkFrame def def Missing))
+          outputs <-  runConduit (source .| Conduit.takeExactlyC (1+outputLen) sinkList)
+          tail outputs `shouldBe` replicate outputLen missing
+
       it
-        "passes 1 payload frame, then generates a Missing from because the sender stalls for more than a packet duration, then passes another frame" $ do
-          r <- mkFrameRing @IO  10
+        "passes 1 payload frame, then generates a Missing because the sender stalls for more than a packet duration, then passes another frame" $ do
+          r <- mkFrameRing @IO 4
           let
             f1 :: SyncStream Int () FakePayload
             f1 = MkStream (Next (MkFrame def def (FP (1 + review nominalDiffTime duration))))
@@ -114,7 +123,7 @@ spec =
             duration = 0.02
             durationStalled = 30_000
             source = frameRingSource r duration
-          (_, [_, out1,out2,out3]) <- concurrently
+          (_, [_, out1,out2,out3,out4]) <- concurrently
             (connect
                 (do
                   yield f1
@@ -122,10 +131,11 @@ spec =
                   yield f3
                   )
                 sink)
-            (runConduit (source .| Conduit.takeExactlyC 4 sinkList))
+            (runConduit (source .| Conduit.takeExactlyC 5 sinkList))
           out1 `shouldBe` Got <$> f1
           out2 `shouldBe` Missing <$ f1
           out3 `shouldBe` Got <$> f3
+          out4 `shouldBe` Missing <$ f1
 
     describe "overflow" $ do
       it "it keeps the initial start value and the most recent payloads when too many payloads are received" $
@@ -137,8 +147,7 @@ spec =
             f1 = MkStream (Next (MkFrame def def (FP (1 + review nominalDiffTime duration))))
             sink = frameRingSink r
             duration :: NominalDiffTime
-            duration = 0.02
-            durationStalled = 20_000
+            duration = 0.002
             source = frameRingSource r duration
           connect (yieldMany (replicate (2*n) f1)) sink
           outs <- runConduit (source .| Conduit.takeExactlyC 2 sinkList)
@@ -157,8 +166,7 @@ spec =
             startFrames = map (\i -> MkStream (Start (MkFrameCtx i () () ()))) [1 .. 2*n]
             sink = frameRingSink r
             duration :: NominalDiffTime
-            duration = 0.02
-            durationStalled = 20_000
+            duration = 0.002
             source = frameRingSource r duration
           connect (yieldMany startFrames) sink
           [outFirst] <- runConduit (source .| Conduit.takeExactlyC 1 sinkList)
@@ -175,8 +183,7 @@ spec =
             f2 = MkStream (Next (MkFrame def def (FP (1 + review nominalDiffTime duration))))
             sink = frameRingSink r
             duration :: NominalDiffTime
-            duration = 0.02
-            durationStalled = 20_000
+            duration = 0.002
             source = frameRingSource r duration
           connect (yieldMany [f1,f1]) sink
           Just out <- runConduit (source .| await)

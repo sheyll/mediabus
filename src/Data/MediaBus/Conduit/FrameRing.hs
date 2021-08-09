@@ -1,6 +1,14 @@
+{-# LANGUAGE TupleSections #-}
 -- | Asynchronous execution of conduits. This module contains a set of functions
 -- to concurrently execute 'Stream' processing conduits and couple them using
--- 'TBQueue's.
+-- an array of buffers, forming a ring, which means that when
+-- the array is full, the writing thread overwrites existing elements.
+--
+-- Both reading and writing only block when accessing the same ring buffer
+-- element at the same time.
+--
+-- When clear on read is active the reader replaces the element just read with
+-- blank media.
 module Data.MediaBus.Conduit.FrameRing
   ( FrameRing (),
     mkFrameRing,
@@ -29,11 +37,13 @@ import Data.Time.Clock
 import Numeric.Natural
 import System.Random
 import UnliftIO
-import Control.Concurrent.STM (flushTBQueue)
+import qualified Data.Vector as V
+import Control.Monad (void)
 
 data RingSourceState s t = MkRingSourceState
   { _lastWakeupTime :: !UTCTime,
-    _nextYieldTime :: !NominalDiffTime
+    _nextYieldTime :: !NominalDiffTime,
+    _readPos :: !Int
   }
 
 makeLenses ''RingSourceState
@@ -47,7 +57,9 @@ makeLenses ''RingSourceState
 -- Refer to 'frameRingSink' to learn howto put data into the ring
 -- and 'frameRingSource' on how to retreive data.
 newtype FrameRing i p c = MkFrameRing
-  { _frameRingTBQueue :: TBQueue (SyncStream i p c)
+  { _frameRingArray :: V.Vector (IORef (Maybe (SyncStream i p c)))
+
+-- XXX    _frameRingTBQueue :: TBQueue (SyncStream i p c)
   }
 
 -- | Create a new 'FrameRing' with an upper bound on the queue length.
@@ -55,12 +67,19 @@ mkFrameRing ::
   (MonadIO m, Random i, Default p) =>
   Natural ->
   m (FrameRing i p c)
-mkFrameRing qlen =
+mkFrameRing qlen' =
   do
-    r <- newTBQueueIO qlen
+    -- the ring size must be >= 2
+    let qlen = max 2 qlen'
+
+    -- create an array of IORefs containig 'Missing'
+    ring <- V.replicateM (fromIntegral qlen) (newIORef Nothing)
+
+    -- let the first element be a 'Start' frame with a random stream id
     !ssrc <- randomIO
-    atomically (writeTBQueue r (MkStream (Start (MkFrameCtx ssrc def def def))))
-    return (MkFrameRing r)
+    atomicWriteIORef (ring V.! 0) (Just (MkStream (Start (MkFrameCtx ssrc def def def))))
+
+    return (MkFrameRing ring)
 
 -- | Consume a 'SyncStream' and put each value into a 'FrameRing'.
 -- When the ring is full, **drop the oldest** element that is not a
@@ -71,51 +90,44 @@ frameRingSink ::
   (NFData c, NFData i, NFData p, MonadIO m) =>
   FrameRing i p c ->
   ConduitT (SyncStream i p c) Void m ()
-frameRingSink (MkFrameRing !ringRef) = awaitForever pushInRing
+frameRingSink (MkFrameRing !ringRef) = do
+  writeIndexRef <- newIORef 1
+  awaitForever (pushInRing writeIndexRef)
   where
-    pushInRing !newest' = do
+    ringSize = V.length ringRef
+
+    pushInRing !writeIndexRef !newest' = do
+      -- read and update the next write position
+      !writePos <- atomicModifyIORef' writeIndexRef (\i -> ((i + 1) `mod` ringSize, i))
+      -- Debug.traceM (printf "writing to: %i\n" writePos)
+
+      -- strictly evaluate the incoming element
       newest <- evaluate $ withStrategy rdeepseq newest'
-      atomically $ do
-        isFull <- isFullTBQueue ringRef
-        if isFull
-          then do
-            oldest <- readTBQueue ringRef
-            case oldest of
-              MkStream (Start _) -> do
-                isEmpty <- isEmptyTBQueue ringRef
-                if isEmpty
-                  then writeTBQueue ringRef $
-                    case newest of
-                      MkStream (Next _) ->
-                        oldest -- drop the new frame
-                      MkStream (Start _) ->
-                        newest -- drop the old frame
-                  else do
-                    secondOldest <- readTBQueue ringRef
-                    case secondOldest of
-                      MkStream (Start _) ->
-                        unGetTBQueue ringRef secondOldest
-                      MkStream (Next _) ->
-                        unGetTBQueue ringRef oldest
-                    writeTBQueue ringRef newest
-              MkStream (Next _) ->
-                writeTBQueue ringRef newest
-          else
-            case newest of
-              MkStream (Next _) ->
-                writeTBQueue ringRef newest
-              MkStream (Start _newestStart) -> do
-                prevs <- flushTBQueue ringRef
-                case reverse prevs of
-                  (MkStream (Start _):rest) -> do
-                    mapM_ (unGetTBQueue ringRef) rest
-                    -- if the most recent and the previous values are both start frames
-                    -- replace the previous value
-                  _ -> do
-                    mapM_ (writeTBQueue ringRef) prevs
 
-                writeTBQueue ringRef newest
+      -- replace the ring buffer element at writePos
+      void $ atomicModifyIORef
+              (ringRef V.! writePos)
+              (\mOldest -> (Just (replaceRingElem mOldest newest), ()))
 
+    replaceRingElem !mOldest !newest =
+      case mOldest of
+        Nothing ->
+          newest -- if the ring buffer element was read,
+                 -- write the newest frame
+        Just oldest ->
+          case newest of
+            MkStream (Start _) -> -- start frames are always written
+              newest
+            _ ->
+                  -- the oldest element wasn't read yet
+                  case oldest of
+                    MkStream (Next _) ->
+                      -- replace with newest
+                      newest
+                    MkStream (Start _) ->
+                      -- an old, unread start value is more important
+                      -- than a new payload frame
+                      oldest
 
 -- | Periodically poll a 'FrameRing' and yield the 'Frame's
 -- put into the ring, or 'Missing' otherwise.
@@ -130,8 +142,10 @@ frameRingSource ::
   ConduitT () (SyncStream i p (Discontinous c)) m ()
 frameRingSource (MkFrameRing !ringRef) !defaultPacketDuration = do
   !tStart <- liftIO getCurrentTime
-  go tStart (MkRingSourceState tStart 0)
+  go tStart (MkRingSourceState tStart 0 0)
   where
+    ringSize = V.length ringRef
+
     go !tStart !st = do
       let !tNext = addUTCTime (st ^. nextYieldTime) tStart
       let !tLast = st ^. lastWakeupTime
@@ -145,25 +159,32 @@ frameRingSource (MkFrameRing !ringRef) !defaultPacketDuration = do
       if isEarlyWakeup
         then go tStart st'
         else do
-          !currentPacketDuration <- nextFrame
+          (!nextReadPos, !currentPacketDuration) <- nextFrame (st ^. readPos)
           let st'' = st' & nextYieldTime +~ currentPacketDuration
+                         & readPos .~ nextReadPos
           go tStart st''
 
-    nextFrame = do
-      !bufs <- liftIO $ atomically $ tryReadTBQueue ringRef
+    nextFrame rp = do
+      !bufs <- atomicModifyIORef (ringRef V.! rp) (Nothing,)
       case bufs of
         Just (MkStream !buf) ->
-          case buf of
-            Next (MkFrame _ _ x) -> do
-              yieldNextFrame (MkFrame def def (Got x))
-              return (getDuration x)
-            Start (MkFrameCtx ssrc _ _ p) -> do
-              -- Start frame
-              yieldStartFrameCtx (MkFrameCtx ssrc def def p)
-              return 0
+          let
+            nextPos = (rp + 1) `mod` ringSize
+          in
+            case buf of
+              Next (MkFrame _ _ x) -> do
+                -- Debug.traceM (printf "read payload from: %i\n" rp)
+                yieldNextFrame (MkFrame def def (Got x))
+                return (nextPos, getDuration x)
+              Start (MkFrameCtx ssrc _ _ p) -> do
+                -- Start frame
+                -- Debug.traceM (printf "read start from: %i\n" rp)
+                yieldStartFrameCtx (MkFrameCtx ssrc def def p)
+                return (nextPos, 0)
         Nothing -> do
+          -- Debug.traceM (printf "read nothing from: %i\n" rp)
           yieldNextFrame (MkFrame def def Missing)
-          return missingDuration
+          return (rp, missingDuration)
 
     minJitter, maxJitter, missingDuration :: NominalDiffTime
     minJitter = defaultPacketDuration / 4
