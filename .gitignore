@@ -29,7 +29,7 @@ src/**/*.c
 cabal.project.local
 .ghc.environment.*
 .hsenv
-result
+result*
 src/**/*.c
 *.aux
 *.hp
