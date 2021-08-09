@@ -1,14 +1,14 @@
 cabal-version:       2.4
 name:                mediabus
-version:             0.5.0.0
+version:             0.5.0.1
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/sheyll/mediabus
 license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Sven Heyll
-maintainer:          svh@posteo.de
-copyright:           2016-2020 Sven Heyll
+maintainer:          sven.heyll@gmail.com
+copyright:           2016-2021 Sven Heyll
 category:            Media
 build-type:          Simple
 -- extra-source-files:
