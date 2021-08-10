@@ -4,7 +4,7 @@ let
 in
 this.shellFor {
   packages = ps: [ ps.mediabus ];
-
+  buildInputs = [ pkgs.sox ];
   # HACK
   # make hspec-discover available
   # https://github.com/input-output-hk/haskell.nix/issues/231#issuecomment-601469249

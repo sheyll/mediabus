@@ -33,6 +33,8 @@ import GHC.Generics (Generic)
 
 -- ** Types using 'MediaBuffer'
 
+-- TODO simplify, get rid of useless type classes!!!
+
 -- | Types containing a 'MediaBuffer'
 class HasMediaBuffer s t where
   -- | The media buffer type contained in 's'
