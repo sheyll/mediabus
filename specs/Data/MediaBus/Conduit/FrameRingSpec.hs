@@ -17,6 +17,51 @@ import Test.QuickCheck
 spec :: Spec
 spec =
   describe "FrameRing" $ do
+    describe "high-level API" $ do
+      -- NOTE: need -threaded for this test to work
+      it "passes the stream from one thread to another" $ do
+        let
+            fs :: [SyncStream Int () FakePayload]
+            fs = mkF <$> [0..50]
+            mkF i = MkStream (Next (MkFrame def def (FP (i + review nominalDiffTime duration))))
+            duration :: NominalDiffTime
+            duration = 0.02
+            testSource =
+              mapM_
+              (\f ->
+                do
+                  yield f
+                  liftIO $ threadDelay 20_000
+              )
+              fs
+        outFs <- runResourceT (withConcurrentSource 10 testSource (\(_checkDone, newSource) -> do
+                      liftIO (threadDelay 20_000)
+                      runConduit (newSource .| Conduit.takeExactlyC (1 + length fs) sinkList)))
+        drop 1 outFs `shouldBe` (fmap Got <$> fs)
+      it "respects dynamic packet durations" $ do
+        let
+            fs :: [SyncStream Int () FakePayload]
+            fs = mkF <$> [1..6]
+            mkF i = MkStream (Next (MkFrame def def (FP (i * review nominalDiffTime duration))))
+            duration :: NominalDiffTime
+            duration = 0.02
+            testSource =
+              mapM_
+              (\f ->
+                do
+                  yield f
+                  mapMOf_
+                    eachFramePayload
+                    (\x ->
+                      let (MkTicks !muS) = getDurationTicks @_ @(Hz 1_000_000) @Int  x
+                      in  liftIO (threadDelay muS))
+                    f
+              )
+              fs
+        outFs <- runResourceT (withConcurrentSource 10 testSource (\(_checkDone, newSource) -> do
+                      liftIO (threadDelay 20_000)
+                      runConduit (newSource .| Conduit.takeExactlyC (1 + length fs) sinkList)))
+        drop 1 outFs `shouldBe` (fmap Got <$> fs)
     describe "basics" $ do
       it "can be created with mkFrameRing" $ void $ mkFrameRing @IO @Int @()  1
       context "no input data" $ do
@@ -115,14 +160,14 @@ spec =
         "passes 1 payload frame, then generates a Missing because the sender stalls for more than a packet duration, then passes another frame" $ do
           r <- mkFrameRing @IO 4
           let
+            sink = frameRingSink r
+            source = frameRingSource r duration
             f1 :: SyncStream Int () FakePayload
             f1 = MkStream (Next (MkFrame def def (FP (1 + review nominalDiffTime duration))))
             f3 = MkStream (Next (MkFrame def def (FP (3 + review nominalDiffTime duration))))
-            sink = frameRingSink r
             duration :: NominalDiffTime
             duration = 0.02
             durationStalled = 30_000
-            source = frameRingSource r duration
           (_, [_, out1,out2,out3,out4]) <- concurrently
             (connect
                 (do

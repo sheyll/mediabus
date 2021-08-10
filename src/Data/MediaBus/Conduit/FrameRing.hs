@@ -14,6 +14,7 @@ module Data.MediaBus.Conduit.FrameRing
     mkFrameRing,
     frameRingSink,
     frameRingSource,
+    withConcurrentSource
   )
 where
 
@@ -48,6 +49,40 @@ data RingSourceState s t = MkRingSourceState
 
 makeLenses ''RingSourceState
 
+-- | Asynchronously run a source 'ConduitT' connected to a 'FrameRing' and create a
+-- new source that consumes the queue by polling periodically from that queue,
+-- generating a 'Discontinous' output.
+withConcurrentSource ::
+  forall i p c m o.
+  ( MonadResource m,
+    MonadUnliftIO m,
+    Default p,
+    Default c,
+    Default i,
+    HasStaticDuration c,
+    HasDuration c,
+    NFData c,
+    NFData p,
+    NFData i,
+    Random i
+  ) =>
+  Natural ->
+  ConduitT () (SyncStream i p c) m () ->
+  ( ( Async (),
+      ConduitT () (SyncStream i p (Discontinous c)) m ()
+    ) ->
+    m o
+  ) ->
+  m o
+withConcurrentSource !frameQueueLen !src !f = do
+  !pq <- mkFrameRing frameQueueLen
+  let
+    defaultPacketDuration = getStaticDuration (Nothing @c)
+  withAsync
+    (runConduit (src .| frameRingSink pq))
+    (\a -> f (void a, frameRingSource pq defaultPacketDuration))
+
+
 -- | A queue, that decouples content generation and consumption
 -- such that two threads can simultanously produce and consume
 -- frames.
@@ -58,8 +93,6 @@ makeLenses ''RingSourceState
 -- and 'frameRingSource' on how to retreive data.
 newtype FrameRing i p c = MkFrameRing
   { _frameRingArray :: V.Vector (IORef (Maybe (SyncStream i p c)))
-
--- XXX    _frameRingTBQueue :: TBQueue (SyncStream i p c)
   }
 
 -- | Create a new 'FrameRing' with an upper bound on the queue length.

@@ -19,3 +19,5 @@ instance Default FakePayload where
 instance HasDuration FakePayload where
   getDuration = view (to fakeDuration . nominalDiffTime)
 
+instance HasStaticDuration FakePayload where
+  type GetStaticDuration FakePayload = 20 ':/: Hz 1000

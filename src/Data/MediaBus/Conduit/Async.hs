@@ -42,7 +42,7 @@ data PollFrameContentSourceSt s t
 
 makeLenses ''PollFrameContentSourceSt
 
--- | Asynchronously run a 'Source' connected to a 'FrameContentQ' and create a
+-- | Asynchronously run a source 'ConduitT' connected to a 'FrameContentQ' and create a
 -- new source that consumes the queue by polling periodically from that queue,
 -- generating a 'Discontinous' output.
 withAsyncPolledSource ::
