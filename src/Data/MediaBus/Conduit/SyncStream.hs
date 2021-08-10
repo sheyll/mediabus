@@ -18,6 +18,7 @@ import Data.MediaBus.Basics.Ticks
 import Data.MediaBus.Conduit.Stream
 import Data.MediaBus.Media.Stream
 import Data.MediaBus.Media.SyncStream
+import Conduit (mapC)
 
 -- * Combined Sequence number and timestamp calculation
 
@@ -53,17 +54,9 @@ setSequenceNumberAndTimestampC =
 -- This functions is /strict/ and uses 'assumeSynchronized'
 -- under the hood.
 assumeSynchronizedC ::
-  (Monad m, KnownRate r, HasDuration d, Num s, CanBeTicks r t) =>
-  ConduitT (SyncStream i p d) (Stream i s (Ticks r t) p d) m ()
-assumeSynchronizedC =
-  evalStateC
-    (0, 0)
-    ( awaitForever
-        ( \sIn -> do
-            sOut <- lift (state (setSequenceNumberAndTimestamp sIn))
-            yield sOut
-        )
-    )
+  Monad m =>
+  ConduitT (Stream i s t p d) (SyncStream i p d) m ()
+assumeSynchronizedC = mapC assumeSynchronized
 
 -- * Timestamp calculation and conversion
 

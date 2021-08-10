@@ -12,8 +12,18 @@ import Test.QuickCheck
 spec :: Spec
 spec =
   describe "Stream conduits"
-    $ describe "Functor instance: fmap"
-    $ it "should have the same result as 'overFrameContentC (...) f'" pending
+    $ do
+        describe "Functor instance: fmap"
+              $ it "should have the same result as 'overFrameContentC (...) f'" pending
+        describe "assumeSynchronized" $
+          it "removes sequence numbers and timestamps but passes all buffers untouched" $
+            property $ \(inputs :: [Stream Bool Int Int Int Int]) ->
+              let outputs = runConduitPure (yieldMany inputs .| assumeSynchronizedC .| sinkList )
+              in
+                length inputs === length outputs
+                .&&.
+                toListOf (each . eachFramePayload) inputs
+                 === toListOf (each . eachFramePayload) outputs
 
 -- fmap f = overFrameContentC undefined (mapInput _framePayload (const Nothing) (const f))
 _helloWorld :: IO ()
