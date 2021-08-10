@@ -57,8 +57,6 @@ withConcurrentSource ::
   ( MonadResource m,
     MonadUnliftIO m,
     Default p,
-    Default c,
-    Default i,
     HasStaticDuration c,
     HasDuration c,
     NFData c,
