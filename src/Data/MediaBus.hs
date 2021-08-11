@@ -14,7 +14,6 @@ import Data.MediaBus.Basics.Series as X
 import Data.MediaBus.Basics.SourceId as X
 import Data.MediaBus.Basics.Ticks as X
 import Data.MediaBus.Basics.VectorExtra as X
-import Data.MediaBus.Conduit.Async as X
 import Data.MediaBus.Conduit.Audio.Raw.Alaw as X
 import Data.MediaBus.Conduit.Audio.Raw.DebugSink as X
 import Data.MediaBus.Conduit.Audio.Raw.Resample as X
