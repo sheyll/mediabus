@@ -11,7 +11,7 @@ let
         };
         projectFileName = "cabal.project";
         compiler-nix-name = "ghc8105";
-        pkg-def-extras = [ ];
+        pkg-def-extras = [];
         modules =
           [
             {
@@ -21,17 +21,18 @@ let
                 this.hsPkgs.hspec-discover
               ];
               # END OF HACK
+              packages.mediabus.allComponent = {
+                enableExecutableProfiling = withProfiling;
+                enableLibraryProfiling = withProfiling;
+              } // (
+                if withProfiling then
+                  {
+                    ghcOptions = "-fprof-auto";
+                  }
+                else {}
+              );
             }
-          ]
-          ++
-          (if withProfiling then
-            [
-              {
-                packages.mediabus.package.ghcOptions = "-fprof-auto";
-                packages.mediabus.components.library.enableLibraryProfiling = true;
-              }
-            ] else [{ }]);
+          ];
       };
 in
 this
-
