@@ -18,6 +18,7 @@ import Foreign.Storable
   )
 import GHC.Generics (Generic)
 import Test.QuickCheck (Arbitrary (arbitrary))
+import Foreign.Ptr
 
 -- | The channel layout indicator type for **stereo** audio
 data Stereo
@@ -75,17 +76,24 @@ instance
   def = MkStereo def def
 
 instance
+  forall s.
   Storable s =>
   Storable (Pcm Stereo s)
   where
   sizeOf _ = 2 * sizeOf (undefined :: s)
   alignment = alignment
   peekByteOff ptr off = do
-    l <- peekByteOff ptr off
+    let
+      sPtr :: Ptr s
+      sPtr = castPtr ptr
+    l <- peekByteOff sPtr off
     let rOffset = sizeOf l
-    r <- peekByteOff ptr (rOffset + off)
+    r <- peekByteOff sPtr (rOffset + off)
     return (MkStereo l r)
   pokeByteOff ptr off (MkStereo l r) = do
-    pokeByteOff ptr off l
+    let
+      sPtr :: Ptr s
+      sPtr = castPtr ptr
+    pokeByteOff sPtr off l
     let rOffset = sizeOf l
-    pokeByteOff ptr (off + rOffset) r
+    pokeByteOff sPtr (off + rOffset) r

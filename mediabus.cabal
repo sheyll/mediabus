@@ -137,6 +137,7 @@ test-suite tests
                      , Data.MediaBus.Conduit.SegmentSpec
                      , Data.MediaBus.Conduit.SpecUtils
                      , Data.MediaBus.Conduit.StreamSpec
+                     , Data.MediaBus.Media.Audio.RawSpec
                      , Data.MediaBus.Media.BufferSpec
                      , Data.MediaBus.Media.SyncStreamSpec
                      , FakePayload

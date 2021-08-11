@@ -34,7 +34,7 @@ traceShowC probability msg =
     awaitForever $ \x -> do
       (g, omitted) <- State.get
       let (p, g') = randomR (0, 1) g
-      if p < probability
+      if p <= probability
         then do
           let omittedmsg =
                 if omitted == 0
