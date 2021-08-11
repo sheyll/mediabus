@@ -10,26 +10,27 @@ module Data.MediaBus.Media.Audio.Raw.Alaw
 where
 
 import Control.DeepSeq (NFData)
-import Control.Lens
+import Control.Lens (Iso', iso)
 import Data.Bits
-import Data.Default
+  ( Bits (shiftL, shiftR, testBit, xor, (.&.), (.|.)),
+  )
+import Data.Default (Default)
 import Data.Function (on)
-import Data.Int
-import Data.MediaBus.Media.Audio.Raw
-import Data.MediaBus.Media.Audio.Raw.Signed16bit
-import Data.MediaBus.Media.Blank
-import Data.Typeable
-import Data.Word
-import Foreign.Storable
+import Data.Int (Int16)
+import Data.MediaBus.Media.Audio.Raw (IsPcmValue (..))
+import Data.MediaBus.Media.Audio.Raw.Signed16bit (S16 (MkS16))
+import Data.MediaBus.Media.Blank (CanBeBlank (..))
+import Data.Typeable (Typeable)
+import Data.Word (Word8)
+import Foreign.Storable (Storable)
 import GHC.Generics (Generic)
 import Test.QuickCheck (Arbitrary (..))
 
 -- | A PCM audio sample represented by a single byte, that can be converted to a
 -- signed 13bit audio sample.
-newtype ALaw
-  = MkALaw
-      { _alawValue :: Word8
-      }
+newtype ALaw = MkALaw
+  { _alawValue :: Word8
+  }
   deriving
     ( Show,
       Storable,

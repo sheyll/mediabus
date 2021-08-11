@@ -11,13 +11,14 @@ module Data.MediaBus.Media.Channels
   )
 where
 
-import Control.Lens
-import Data.Typeable
+import Control.Lens (Traversal, Traversal')
+import Data.Typeable (Typeable, typeRep)
 
 -- | Like 'KnownNat' but for promoted 'ChannelLayout's.
 class
   Typeable c =>
-  KnownChannelLayout c where
+  KnownChannelLayout c
+  where
   -- | Return the 'ChannelLayout' for type @c@
   numberOfChannels :: proxy c -> Int
 
@@ -42,7 +43,8 @@ instance
 -- | Types that have some 'KnownChannelLayout'
 class
   (SetChannelLayout s (ChannelLayout s) ~ s) =>
-  HasChannelLayout s where
+  HasChannelLayout s
+  where
   -- | The channel layout contained in 's'
   type ChannelLayout s
 

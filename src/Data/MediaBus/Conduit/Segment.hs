@@ -7,16 +7,39 @@ module Data.MediaBus.Conduit.Segment
   )
 where
 
-import Conduit
+import Conduit (ConduitT, awaitForever, evalStateC)
 import Control.Lens
+  ( Field1 (_1),
+    Field2 (_2),
+    use,
+    (#),
+    (+=),
+    (-=),
+    (.=),
+    (<<.=),
+  )
 import Control.Parallel.Strategies (NFData)
-import Data.Default
-import Data.MediaBus.Basics.Series
+import Data.Default (Default)
+import Data.MediaBus.Basics.Series (Series (Next, Start))
 import Data.MediaBus.Basics.Ticks
+  ( CanBeTicks,
+    HasDuration (..),
+    HasStaticDuration,
+    Ticks,
+    getStaticDuration,
+    nominalDiffTime,
+  )
 import Data.MediaBus.Conduit.Stream
-import Data.MediaBus.Media.Segment
+  ( mapFrameContentC',
+    yieldNextFrame,
+    yieldStartFrameCtx,
+  )
+import Data.MediaBus.Media.Segment (CanSegment (..), Segment (..))
 import Data.MediaBus.Media.Stream
-import Data.Proxy
+  ( Frame (MkFrame),
+    Stream (MkStream),
+  )
+import Data.Proxy (Proxy (Proxy))
 
 -- | The packetizer recombines incoming packets into 'Segment's of the given
 -- size. The sequence numbers will be offsetted by the number extra frames

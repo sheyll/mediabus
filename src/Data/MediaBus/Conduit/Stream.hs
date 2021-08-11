@@ -23,19 +23,38 @@ module Data.MediaBus.Conduit.Stream
 where
 
 import Conduit
-import Control.Lens
-import Control.Monad
+  ( ConduitT,
+    MonadTrans (lift),
+    Void,
+    awaitForever,
+    execWriterC,
+    mapC,
+    mapInput,
+    mapMC,
+    mapOutput,
+    yield,
+  )
+import Control.Lens (mapMOf, over, (^?))
+import Control.Monad ((>=>))
 import Control.Monad.Writer.Strict (tell)
 import Control.Parallel.Strategies
   ( NFData,
     rdeepseq,
     withStrategy,
   )
-import Data.Maybe
-import Data.MediaBus.Basics.Sequence
-import Data.MediaBus.Basics.Series
-import Data.MediaBus.Basics.Ticks
+import Data.Maybe (fromMaybe)
+import Data.MediaBus.Basics.Sequence (HasSeqNum (seqNum))
+import Data.MediaBus.Basics.Series (Series (Next, Start), _Next)
+import Data.MediaBus.Basics.Ticks (HasTimestamp (timestamp))
 import Data.MediaBus.Media.Stream
+  ( EachFramePayload (eachFramePayload),
+    Frame,
+    FrameCtx,
+    Stream (..),
+    Streamish,
+    framePayload,
+    stream,
+  )
 
 -- * Yielding 'Stream' content
 

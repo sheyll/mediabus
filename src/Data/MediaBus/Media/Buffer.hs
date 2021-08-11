@@ -19,13 +19,22 @@ module Data.MediaBus.Media.Buffer
   )
 where
 
-import Control.DeepSeq
+import Control.DeepSeq (NFData)
 import Control.Lens
+  ( Each (..),
+    Iso,
+    Lens,
+    Lens',
+    iso,
+    over,
+    to,
+    view,
+  )
 import Control.Monad.ST (ST, runST)
 import qualified Data.ByteString as B
-import Data.Default
-import Data.MediaBus.Media.Samples
-import Data.Typeable
+import Data.Default (Default (..))
+import Data.MediaBus.Media.Samples (CanBeSample)
+import Data.Typeable (Proxy (..), typeRep)
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.ByteString as Spool
 import GHC.Exts (IsList (..))
@@ -62,10 +71,9 @@ type HasMediaBufferL s t a b = (HasMediaBuffer s t, MediaBufferFrom s ~ a, Media
 type HasMediaBufferL' s a = (HasMediaBuffer s s, MediaBufferFrom s ~ a, MediaBufferTo s ~ a)
 
 -- | A buffer for media data. This is just a newtype wrapper around 'V.Vector'.
-newtype MediaBuffer t
-  = MkMediaBuffer
-      { _mediaBufferVector :: V.Vector t
-      }
+newtype MediaBuffer t = MkMediaBuffer
+  { _mediaBufferVector :: V.Vector t
+  }
   deriving (Generic, NFData, Semigroup, Monoid, Eq)
 
 -- | 'MediaBuffer' to 'Vector' isomorphism

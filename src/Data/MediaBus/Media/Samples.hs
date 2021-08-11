@@ -19,12 +19,12 @@ module Data.MediaBus.Media.Samples
   )
 where
 
-import Control.DeepSeq
-import Control.Lens
-import Data.MediaBus.Basics.Ticks
-import Data.MediaBus.Media.Media
-import Data.Typeable
-import Foreign.Storable
+import Control.DeepSeq (NFData)
+import Control.Lens (Traversal, Traversal')
+import Data.MediaBus.Basics.Ticks (HasRate)
+import Data.MediaBus.Media.Media (IsMedia)
+import Data.Typeable (Typeable)
+import Foreign.Storable (Storable)
 
 -- | Types that are 'IsMedia' instances with sampled content.
 class
@@ -38,7 +38,8 @@ type CanBeSample i = (Typeable i, Eq i, NFData i, Storable i)
 -- other sample types.
 class
   (CanBeSample (SamplesFrom s), CanBeSample (SamplesTo t)) =>
-  EachSample s t where
+  EachSample s t
+  where
   -- | The type of the contained media samples passed as input by 'eachSample'.
   type SamplesFrom s
 

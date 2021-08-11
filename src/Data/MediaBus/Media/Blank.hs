@@ -6,11 +6,18 @@ module Data.MediaBus.Media.Blank
   )
 where
 
-import Control.Lens
+import Control.Lens (from, (#))
 import Data.MediaBus.Basics.Ticks
-import Data.MediaBus.Media.Segment
-import Data.Proxy
-import Data.Time.Clock
+  ( CanBeTicks,
+    HasStaticDuration,
+    PicoSeconds,
+    Ticks,
+    getStaticDuration,
+    nominalDiffTime,
+  )
+import Data.MediaBus.Media.Segment (Segment (MkSegment))
+import Data.Proxy (Proxy (..))
+import Data.Time.Clock (NominalDiffTime)
 
 -- | Types that can have /blank/ values.
 class CanBeBlank a where

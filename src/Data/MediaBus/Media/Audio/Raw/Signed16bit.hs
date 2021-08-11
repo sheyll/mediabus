@@ -6,22 +6,21 @@ module Data.MediaBus.Media.Audio.Raw.Signed16bit
 where
 
 import Control.DeepSeq (NFData)
-import Control.Lens
-import Data.Bits
+import Control.Lens (Iso', iso)
+import Data.Bits (Bits (unsafeShiftR))
 import Data.Default (Default)
-import Data.Int
-import Data.MediaBus.Media.Audio.Raw
-import Data.MediaBus.Media.Blank
-import Data.Typeable
+import Data.Int (Int16)
+import Data.MediaBus.Media.Audio.Raw (IsPcmValue (..))
+import Data.MediaBus.Media.Blank (CanBeBlank (..))
+import Data.Typeable (Typeable)
 import Data.Vector.Storable (Storable)
-import Test.QuickCheck
-import Text.Printf
+import Test.QuickCheck (Arbitrary)
+import Text.Printf (printf)
 
 -- | A value representing a signed PCM audio sample with a width of 16 bit.
-newtype S16
-  = MkS16
-      { _s16Sample :: Int16
-      }
+newtype S16 = MkS16
+  { _s16Sample :: Int16
+  }
   deriving
     ( Eq,
       Ord,

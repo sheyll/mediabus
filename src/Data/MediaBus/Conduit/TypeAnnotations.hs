@@ -9,7 +9,7 @@ module Data.MediaBus.Conduit.TypeAnnotations
   )
 where
 
-import Conduit
+import Conduit (ConduitT, Void)
 
 -- * Generic Conduits
 

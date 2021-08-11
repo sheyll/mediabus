@@ -22,14 +22,20 @@ module Data.MediaBus.Media.Discontinous
   )
 where
 
-import Control.Lens
+import Control.Lens (makePrisms, over)
 import Control.Parallel.Strategies (NFData)
-import Data.Default
+import Data.Default (Default (..))
 import Data.MediaBus.Basics.Ticks
-import Data.MediaBus.Media.Channels
-import Data.MediaBus.Media.Media
-import Data.MediaBus.Media.Samples
-import Data.MediaBus.Media.Stream
+  ( CoerceRate (..),
+    HasDuration (getDuration),
+    HasRate (..),
+    HasStaticDuration (..),
+    KnownRate,
+  )
+import Data.MediaBus.Media.Channels (EachChannel (..))
+import Data.MediaBus.Media.Media (EachMedia (..))
+import Data.MediaBus.Media.Samples (EachSample (..))
+import Data.MediaBus.Media.Stream (Stream)
 import GHC.Generics (Generic)
 
 -- | Content that can be 'Missing'.
@@ -103,11 +109,11 @@ instance
   coerceRate px = over _Got (coerceRate px)
 
 instance
-   (HasStaticDuration c) =>
-   HasStaticDuration (Discontinous c)
-   where
-   type SetStaticDuration (Discontinous c) pt = Discontinous (SetStaticDuration c pt)
-   type GetStaticDuration (Discontinous c) = GetStaticDuration c
+  (HasStaticDuration c) =>
+  HasStaticDuration (Discontinous c)
+  where
+  type SetStaticDuration (Discontinous c) pt = Discontinous (SetStaticDuration c pt)
+  type GetStaticDuration (Discontinous c) = GetStaticDuration c
 
 -- | A 'Stream' that has 'Discontinous' payloads.
 type StreamWithGaps i s t p c = Stream i s t p (Discontinous c)

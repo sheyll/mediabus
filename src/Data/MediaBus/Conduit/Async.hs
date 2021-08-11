@@ -1,6 +1,8 @@
 -- | Asynchronous execution of conduits. This module contains a set of functions
 -- to concurrently execute 'Stream' processing conduits and couple them using
 -- 'TBQueue's.
+--
+-- DEPRECATED
 module Data.MediaBus.Conduit.Async
   ( withAsyncPolledSource,
     FrameContentQ (),
@@ -11,34 +13,79 @@ module Data.MediaBus.Conduit.Async
 where
 
 import Conduit
+  ( ConduitT,
+    MonadIO (..),
+    MonadResource,
+    MonadUnliftIO,
+    Void,
+    awaitForever,
+    evalStateC,
+    runConduit,
+    (.|),
+  )
 import Control.Concurrent (threadDelay)
-import Control.Lens
-import Control.Monad.Logger
+import Control.Lens (makeLenses, use, (#), (<<+=), (^.), (^?))
+import Control.Monad.Logger (MonadLogger, logDebug, logInfo)
 import Control.Monad.State
+  ( replicateM_,
+    unless,
+    void,
+    when,
+  )
 import Control.Parallel.Strategies
   ( NFData,
     rdeepseq,
     withStrategy,
   )
-import Data.Default
+import Data.Default (Default (..))
 import Data.MediaBus.Basics.Clock
+  ( IsClock (ClockTime, diffTime, now),
+    UtcClock,
+    utcClockTimeDiff,
+  )
 import Data.MediaBus.Basics.Ticks
+  ( HasDuration (getDuration),
+    HasStaticDuration,
+    Hz,
+    KnownRate,
+    Ticks (_ticks),
+    getStaticDuration,
+    nominalDiffTime,
+  )
 import Data.MediaBus.Conduit.Stream
-import Data.MediaBus.Media.Discontinous
+  ( yieldNextFrame,
+    yieldStartFrameCtx,
+  )
+import Data.MediaBus.Media.Discontinous (Discontinous (..))
 import Data.MediaBus.Media.Stream
-import Data.Proxy
-import Data.String
-import Data.Time.Clock
-import Numeric.Natural
-import System.Random
-import Text.Printf
+  ( EachFramePayload (eachFramePayload),
+    Frame (MkFrame),
+    FrameCtx (MkFrameCtx),
+    Stream,
+  )
+import Data.Proxy (Proxy (..))
+import Data.String (IsString (fromString))
+import Data.Time.Clock (NominalDiffTime)
+import Numeric.Natural (Natural)
+import System.Random (Random, randomIO)
+import Text.Printf (printf)
 import UnliftIO
+  ( Async,
+    TBQueue,
+    atomically,
+    evaluate,
+    isFullTBQueue,
+    newTBQueueIO,
+    race,
+    readTBQueue,
+    withAsync,
+    writeTBQueue,
+  )
 
-data PollFrameContentSourceSt s t
-  = MkPollFrameContentSourceSt
-      { _ppSeqNum :: !s,
-        _ppTicks :: !t
-      }
+data PollFrameContentSourceSt s t = MkPollFrameContentSourceSt
+  { _ppSeqNum :: !s,
+    _ppTicks :: !t
+  }
 
 makeLenses ''PollFrameContentSourceSt
 
@@ -81,12 +128,11 @@ withAsyncPolledSource !frameQueueLen !src !f = do
 -- | A queue for 'frameContent' to decouple concurrent conduits carrying
 -- 'Stream's. Under the hood a 'TBQueue' is used. A queue also knows it's
 -- default segment duration and preferred polling interval.
-data FrameContentQ a
-  = MkFrameContentQ
-      { _frameContentQSegmentDuration :: !NominalDiffTime,
-        _frameContentQPollInterval :: !NominalDiffTime,
-        _frameContentQRing :: !(TBQueue a)
-      }
+data FrameContentQ a = MkFrameContentQ
+  { _frameContentQSegmentDuration :: !NominalDiffTime,
+    _frameContentQPollInterval :: !NominalDiffTime,
+    _frameContentQRing :: !(TBQueue a)
+  }
 
 -- | Create a new 'FrameContentQ' with an upper bound on the queue length.
 mkFrameContentQ ::

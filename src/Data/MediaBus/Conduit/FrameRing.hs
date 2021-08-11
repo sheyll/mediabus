@@ -1,4 +1,5 @@
 {-# LANGUAGE TupleSections #-}
+
 -- | Asynchronous execution of conduits. This module contains a set of functions
 -- to concurrently execute 'Stream' processing conduits and couple them using
 -- an array of buffers, forming a ring, which means that when
@@ -14,32 +15,68 @@ module Data.MediaBus.Conduit.FrameRing
     mkFrameRing,
     frameRingSink,
     frameRingSource,
-    withConcurrentSource
+    withConcurrentSource,
   )
 where
 
 import Conduit
+  ( ConduitT,
+    MonadIO (..),
+    MonadResource,
+    MonadUnliftIO,
+    Void,
+    awaitForever,
+    runConduit,
+    (.|),
+  )
 import Control.Concurrent (threadDelay)
-import Control.Lens
+import Control.Lens (makeLenses, (&), (+~), (.~), (^.))
+import Control.Monad (void)
 import Control.Parallel.Strategies
   ( NFData,
     rdeepseq,
     withStrategy,
   )
-import Data.Default
+import Data.Default (Default (..))
 import Data.Fixed (Fixed (..))
-import Data.MediaBus.Basics.Series
+import Data.MediaBus.Basics.Series (Series (Next, Start))
 import Data.MediaBus.Basics.Ticks
+  ( HasDuration (getDuration),
+    HasStaticDuration,
+    getStaticDuration,
+  )
 import Data.MediaBus.Conduit.Stream
-import Data.MediaBus.Media.Discontinous
+  ( yieldNextFrame,
+    yieldStartFrameCtx,
+  )
+import Data.MediaBus.Media.Discontinous (Discontinous (..))
 import Data.MediaBus.Media.Stream
-import Data.MediaBus.Media.SyncStream
+  ( Frame (MkFrame),
+    FrameCtx (MkFrameCtx),
+    Stream (MkStream),
+  )
+import Data.MediaBus.Media.SyncStream (SyncStream)
 import Data.Time.Clock
-import Numeric.Natural
-import System.Random
-import UnliftIO
+  ( NominalDiffTime,
+    UTCTime,
+    addUTCTime,
+    diffUTCTime,
+    getCurrentTime,
+    nominalDiffTimeToSeconds,
+  )
 import qualified Data.Vector as V
-import Control.Monad (void)
+import Numeric.Natural (Natural)
+import System.Random (Random, randomIO)
+import UnliftIO
+  ( Async,
+    IORef,
+    atomicModifyIORef,
+    atomicModifyIORef',
+    atomicWriteIORef,
+    evaluate,
+    newIORef,
+    withAsync,
+  )
 
 data RingSourceState s t = MkRingSourceState
   { _lastWakeupTime :: !UTCTime,
@@ -74,12 +111,10 @@ withConcurrentSource ::
   m o
 withConcurrentSource !frameQueueLen !src !f = do
   !pq <- mkFrameRing frameQueueLen
-  let
-    defaultPacketDuration = getStaticDuration (Nothing @c)
+  let defaultPacketDuration = getStaticDuration (Nothing @c)
   withAsync
     (runConduit (src .| frameRingSink pq))
     (\a -> f (void a, frameRingSource pq defaultPacketDuration))
-
 
 -- | A queue, that decouples content generation and consumption
 -- such that two threads can simultanously produce and consume
@@ -136,29 +171,31 @@ frameRingSink (MkFrameRing !ringRef) = do
       newest <- evaluate $ withStrategy rdeepseq newest'
 
       -- replace the ring buffer element at writePos
-      void $ atomicModifyIORef
-              (ringRef V.! writePos)
-              (\mOldest -> (Just (replaceRingElem mOldest newest), ()))
+      void $
+        atomicModifyIORef
+          (ringRef V.! writePos)
+          (\mOldest -> (Just (replaceRingElem mOldest newest), ()))
 
     replaceRingElem !mOldest !newest =
       case mOldest of
         Nothing ->
           newest -- if the ring buffer element was read,
-                 -- write the newest frame
+          -- write the newest frame
         Just oldest ->
           case newest of
-            MkStream (Start _) -> -- start frames are always written
+            MkStream (Start _) ->
+              -- start frames are always written
               newest
             _ ->
-                  -- the oldest element wasn't read yet
-                  case oldest of
-                    MkStream (Next _) ->
-                      -- replace with newest
-                      newest
-                    MkStream (Start _) ->
-                      -- an old, unread start value is more important
-                      -- than a new payload frame
-                      oldest
+              -- the oldest element wasn't read yet
+              case oldest of
+                MkStream (Next _) ->
+                  -- replace with newest
+                  newest
+                MkStream (Start _) ->
+                  -- an old, unread start value is more important
+                  -- than a new payload frame
+                  oldest
 
 -- | Periodically poll a 'FrameRing' and yield the 'Frame's
 -- put into the ring, or 'Missing' otherwise.
@@ -191,27 +228,26 @@ frameRingSource (MkFrameRing !ringRef) !defaultPacketDuration = do
         then go tStart st'
         else do
           (!nextReadPos, !currentPacketDuration) <- nextFrame (st ^. readPos)
-          let st'' = st' & nextYieldTime +~ currentPacketDuration
-                         & readPos .~ nextReadPos
+          let st'' =
+                st' & nextYieldTime +~ currentPacketDuration
+                  & readPos .~ nextReadPos
           go tStart st''
 
     nextFrame rp = do
       !bufs <- atomicModifyIORef (ringRef V.! rp) (Nothing,)
       case bufs of
         Just (MkStream !buf) ->
-          let
-            nextPos = (rp + 1) `mod` ringSize
-          in
-            case buf of
-              Next (MkFrame _ _ x) -> do
-                -- Debug.traceM (printf "read payload from: %i\n" rp)
-                yieldNextFrame (MkFrame def def (Got x))
-                return (nextPos, getDuration x)
-              Start (MkFrameCtx ssrc _ _ p) -> do
-                -- Start frame
-                -- Debug.traceM (printf "read start from: %i\n" rp)
-                yieldStartFrameCtx (MkFrameCtx ssrc def def p)
-                return (nextPos, 0)
+          let nextPos = (rp + 1) `mod` ringSize
+           in case buf of
+                Next (MkFrame _ _ x) -> do
+                  -- Debug.traceM (printf "read payload from: %i\n" rp)
+                  yieldNextFrame (MkFrame def def (Got x))
+                  return (nextPos, getDuration x)
+                Start (MkFrameCtx ssrc _ _ p) -> do
+                  -- Start frame
+                  -- Debug.traceM (printf "read start from: %i\n" rp)
+                  yieldStartFrameCtx (MkFrameCtx ssrc def def p)
+                  return (nextPos, 0)
         Nothing -> do
           -- Debug.traceM (printf "read nothing from: %i\n" rp)
           yieldNextFrame (MkFrame def def Missing)

@@ -16,8 +16,8 @@ module Data.MediaBus.Media.Media
   )
 where
 
-import Control.DeepSeq
-import Control.Lens
+import Control.DeepSeq (NFData)
+import Control.Lens (Lens, Lens', Traversal, Traversal')
 
 -- * Media
 
@@ -37,7 +37,8 @@ data MediaDescription i where
 -- | Types that contain an 'IsMedia' instance.
 class
   (IsMedia (MediaFrom s), IsMedia (MediaTo t)) =>
-  HasMedia s t where
+  HasMedia s t
+  where
   type MediaFrom s
   type MediaTo t
 
@@ -64,7 +65,8 @@ type HasMediaL' s a = (IsMedia a, HasMedia s s, MediaFrom s ~ a, MediaTo s ~ a, 
 -- | Types that contain zero or more 'IsMedia' instance.
 class
   (IsMedia (MediaFromE s), IsMedia (MediaToE t)) =>
-  EachMedia s t where
+  EachMedia s t
+  where
   -- | The contained input media type, since the name 'MediaFrom' was taken
   -- , this is named 'MediaFromE' where the @E@ is supposed to hint at the fact
   -- that this class is called 'EachMedia'.

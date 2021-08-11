@@ -23,34 +23,43 @@ where
 
 import Control.DeepSeq (NFData)
 import Control.Lens
-import Data.Default
-import Data.MediaBus.Basics.Sequence
-import Data.MediaBus.Basics.Series
+  ( Bifunctor,
+    Traversal,
+    makeLenses,
+    over,
+    preview,
+  )
+import Data.Bifunctor (Bifunctor (first, second))
+import Data.Default (Default (..))
+import Data.MediaBus.Basics.Sequence (HasSeqNum (..))
+import Data.MediaBus.Basics.Series (Series (Next), _Next, _Start)
 import Data.MediaBus.Basics.Ticks
-import Data.MediaBus.Media.Channels
-import Data.MediaBus.Media.Media
+  ( HasDuration (getDuration),
+    HasStaticDuration (..),
+    HasTimestamp (GetTimestamp, SetTimestamp, timestamp),
+  )
+import Data.MediaBus.Media.Channels (EachChannel (..))
+import Data.MediaBus.Media.Media (HasMedia (..))
 import GHC.Generics (Generic)
-import Test.QuickCheck
-import Data.Bifunctor
+import Test.QuickCheck (Arbitrary (arbitrary))
 
 -- | Meta information about a media 'Stream'.
-data FrameCtx streamId sequenceNumber timestamp streamStartPayload
-  = MkFrameCtx
-      { -- | An identifier for the stream, e.g. a track name
-        -- or an RTP SSRC
-        _frameCtxSourceId :: !streamId,
-        -- | The start time stamp of a stream all time
-        -- stamps in the 'Frame's are relative to this.
-        _frameCtxTimestampRef :: !timestamp,
-        -- | The start sequence number of a stream all
-        -- sequence numbers in the 'Frame's are relative to
-        -- this.
-        _frameCtxSeqNumRef :: !sequenceNumber,
-        -- | An extra field for media type specific extra
-        -- information, like the init segment of an ISOBMFF
-        -- media.
-        _frameCtxInit :: !streamStartPayload
-      }
+data FrameCtx streamId sequenceNumber timestamp streamStartPayload = MkFrameCtx
+  { -- | An identifier for the stream, e.g. a track name
+    -- or an RTP SSRC
+    _frameCtxSourceId :: !streamId,
+    -- | The start time stamp of a stream all time
+    -- stamps in the 'Frame's are relative to this.
+    _frameCtxTimestampRef :: !timestamp,
+    -- | The start sequence number of a stream all
+    -- sequence numbers in the 'Frame's are relative to
+    -- this.
+    _frameCtxSeqNumRef :: !sequenceNumber,
+    -- | An extra field for media type specific extra
+    -- information, like the init segment of an ISOBMFF
+    -- media.
+    _frameCtxInit :: !streamStartPayload
+  }
   deriving (Eq, Ord, Generic, Functor)
 
 instance
@@ -113,17 +122,16 @@ instance
 -- video frame or a chat message.
 --
 -- A 'Frame' can hold a 'Data.MediaBus.Media.Segment'
-data Frame sequenceNumber timestamp payload
-  = MkFrame
-      { -- | The timestamp at which the representation of the
-        -- media content in this frame **begins**
-        _frameTimestamp :: !timestamp,
-        -- | The sequence number of that frame, useful to detect
-        -- missing frames
-        _frameSeqNum :: !sequenceNumber,
-        -- | The actual (media) content.
-        _framePayload :: !payload
-      }
+data Frame sequenceNumber timestamp payload = MkFrame
+  { -- | The timestamp at which the representation of the
+    -- media content in this frame **begins**
+    _frameTimestamp :: !timestamp,
+    -- | The sequence number of that frame, useful to detect
+    -- missing frames
+    _frameSeqNum :: !sequenceNumber,
+    -- | The actual (media) content.
+    _framePayload :: !payload
+  }
   deriving (Eq, Ord, Generic)
 
 instance
@@ -231,10 +239,9 @@ instance
 -- >          (Hz 16000)
 -- >          Mono
 -- >          (Raw S16)))
-newtype Stream streamId sequenceNumber timestamp streamStartPayload payload
-  = MkStream
-      { _stream :: Streamish streamId sequenceNumber timestamp streamStartPayload payload
-      }
+newtype Stream streamId sequenceNumber timestamp streamStartPayload payload = MkStream
+  { _stream :: Streamish streamId sequenceNumber timestamp streamStartPayload payload
+  }
   deriving (Ord, Eq, Arbitrary, Generic, Functor)
 
 instance

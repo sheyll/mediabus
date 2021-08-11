@@ -8,16 +8,25 @@ module Data.MediaBus.Media.Segment
   )
 where
 
-import Control.DeepSeq
-import Control.Lens
-import Data.Default
+import Control.DeepSeq (NFData)
+import Control.Lens (Iso, iso)
+import Data.Default (Default)
 import Data.MediaBus.Basics.Ticks
-import Data.MediaBus.Media.Channels
-import Data.MediaBus.Media.Media
-import Data.MediaBus.Media.Samples
-import Data.Proxy
-import Test.QuickCheck
-import Text.Printf
+  ( CoerceRate (..),
+    HasDuration (getDuration),
+    HasRate (..),
+    HasStaticDuration (..),
+    KnownRate,
+    KnownStaticTicks,
+    StaticTicks,
+    getStaticDuration,
+  )
+import Data.MediaBus.Media.Channels (EachChannel (..))
+import Data.MediaBus.Media.Media (HasMedia (..))
+import Data.MediaBus.Media.Samples (EachSample (..))
+import Data.Proxy (Proxy (..))
+import Test.QuickCheck (Arbitrary)
+import Text.Printf (printf)
 
 -- | A segment is some content with a fixed (type level) duration.
 newtype Segment (duration :: StaticTicks) c = MkSegment {_segmentContent :: c}

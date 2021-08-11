@@ -6,13 +6,20 @@ module Data.MediaBus.Conduit.Audio.Raw.Alaw
 where
 
 import Control.DeepSeq (NFData)
-import Control.Lens
-import Data.Conduit
-import Data.MediaBus.Conduit.Stream
+import Control.Lens (over)
+import Data.Conduit (ConduitT)
+import Data.MediaBus.Conduit.Stream (mapFrameContentC')
 import Data.MediaBus.Media.Audio.Raw.Alaw
-import Data.MediaBus.Media.Audio.Raw.Signed16bit
+  ( ALaw,
+    decodeALawSample,
+    encodeALawSample,
+  )
+import Data.MediaBus.Media.Audio.Raw.Signed16bit (S16)
 import Data.MediaBus.Media.Channels
-import Data.MediaBus.Media.Stream
+  ( EachChannel (eachChannel),
+    EachChannelL,
+  )
+import Data.MediaBus.Media.Stream (Stream)
 
 -- | Convert from 'ALaw' to 'S16'
 alawToS16 ::

@@ -9,20 +9,43 @@ module Data.MediaBus.Media.Audio.Raw
   )
 where
 
-import Control.DeepSeq
-import Control.Lens
+import Control.DeepSeq (NFData (..))
+import Control.Lens (Each (each), Iso, iso, (#), (^.))
 import Data.MediaBus.Basics.Ticks
-import Data.MediaBus.Media.Audio
+  ( HasDuration (getDuration),
+    KnownRate (rateVal),
+    RateProxy (MkRateProxy),
+    getPeriodDuration,
+    getStaticDuration,
+  )
+import Data.MediaBus.Media.Audio (Audio)
 import Data.MediaBus.Media.Blank
+  ( CanBeBlank (..),
+    CanGenerateBlankMedia (blankFor),
+  )
 import Data.MediaBus.Media.Buffer
+  ( CanBeSample,
+    HasMediaBuffer (..),
+    MediaBuffer (MkMediaBuffer),
+    createMediaBuffer,
+    mediaBufferLength,
+    mediaBufferVector,
+  )
 import Data.MediaBus.Media.Channels
-import Data.MediaBus.Media.Media
-import Data.MediaBus.Media.Samples
+  ( EachChannel (..),
+    EachChannelL,
+    KnownChannelLayout,
+  )
+import Data.MediaBus.Media.Media (IsMedia, MediaDescription (..))
+import Data.MediaBus.Media.Samples (EachSample (..), EachSampleL)
 import Data.MediaBus.Media.Segment
-import Data.Typeable
+  ( CanSegment (..),
+    segmentContent,
+  )
+import Data.Typeable (Proxy (..), Typeable, typeRep)
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.Mutable as M
-import Test.QuickCheck
+import Test.QuickCheck (Arbitrary)
 
 -- | An indicator for uncompressed audio with a given per sample encoding type.
 data Raw encoding
@@ -36,7 +59,8 @@ data family Pcm c t
 -- | Types of per channel PCM audio sample value.
 class
   (CanBeBlank a, CanBeSample a, Arbitrary a) =>
-  IsPcmValue a where
+  IsPcmValue a
+  where
   -- | Calculate the average of two pcm samples
   pcmAverage :: a -> a -> a
 
@@ -52,9 +76,9 @@ instance
   CanGenerateBlankMedia (Audio r c (Raw t))
   where
   blankFor dt =
-    MkPcm
-      $ createMediaBuffer
-      $ let numberOfSamples =
+    MkPcm $
+      createMediaBuffer $
+        let numberOfSamples =
               ceiling (dt * fromIntegral (rateVal (MkRateProxy :: RateProxy r)))
          in M.replicate numberOfSamples blank
 

@@ -10,15 +10,31 @@ module Data.MediaBus.Conduit.SyncStream
   )
 where
 
+import Conduit (mapC)
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict
-import Data.Conduit
-import Data.Conduit.Lift
+  ( MonadState (state),
+    MonadTrans (lift),
+  )
+import Data.Conduit (ConduitM, ConduitT, awaitForever, yield)
+import Data.Conduit.Lift (evalStateC)
 import Data.MediaBus.Basics.Ticks
-import Data.MediaBus.Conduit.Stream
-import Data.MediaBus.Media.Stream
+  ( CanBeTicks,
+    HasDuration,
+    HasTimestamp (GetTimestamp, SetTimestamp),
+    KnownRate,
+    Ticks,
+    convertTicks,
+    removeTimestamp,
+    setTimestampFromDurations,
+  )
+import Data.MediaBus.Conduit.Stream (mapTimestampC')
+import Data.MediaBus.Media.Stream (Stream)
 import Data.MediaBus.Media.SyncStream
-import Conduit (mapC)
+  ( SyncStream,
+    assumeSynchronized,
+    setSequenceNumberAndTimestamp,
+  )
 
 -- * Combined Sequence number and timestamp calculation
 

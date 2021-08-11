@@ -4,15 +4,18 @@ module Data.MediaBus.Media.Audio.Raw.Mono
   )
 where
 
-import Control.DeepSeq
-import Control.Lens
-import Data.Default
-import Data.MediaBus.Media.Audio.Raw
-import Data.MediaBus.Media.Blank
+import Control.DeepSeq (NFData)
+import Control.Lens (iso)
+import Data.Default (Default)
+import Data.MediaBus.Media.Audio.Raw (IsPcmValue, Pcm)
+import Data.MediaBus.Media.Blank (CanBeBlank)
 import Data.MediaBus.Media.Channels
-import Data.Typeable
-import Foreign.Storable
-import Test.QuickCheck
+  ( EachChannel (..),
+    KnownChannelLayout (..),
+  )
+import Data.Typeable (Typeable)
+import Foreign.Storable (Storable)
+import Test.QuickCheck (Arbitrary)
 
 -- | The channel layout indicator type for **mono** audio
 data Mono

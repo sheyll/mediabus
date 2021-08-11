@@ -6,10 +6,13 @@ module Data.MediaBus.Media.Audio
   )
 where
 
-import Control.Lens
-import Data.MediaBus.Basics.Ticks
+import Control.Lens (iso)
+import Data.MediaBus.Basics.Ticks (HasRate (..), KnownRate, Rate)
 import Data.MediaBus.Media.Channels
-import Data.MediaBus.Media.Media
+  ( HasChannelLayout (..),
+    KnownChannelLayout,
+  )
+import Data.MediaBus.Media.Media (HasMedia (..), IsMedia)
 
 -- | Family of audio media types, indexed by a sampleRate, a channel layout
 --   and a /codec/ parameter. This type family is intended as a basis for all audio

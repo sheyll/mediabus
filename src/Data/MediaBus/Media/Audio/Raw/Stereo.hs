@@ -4,15 +4,20 @@ module Data.MediaBus.Media.Audio.Raw.Stereo
   )
 where
 
-import Control.DeepSeq
-import Data.Default
-import Data.MediaBus.Media.Audio.Raw
-import Data.MediaBus.Media.Blank
+import Control.DeepSeq (NFData)
+import Data.Default (Default (..))
+import Data.MediaBus.Media.Audio.Raw (IsPcmValue (..), Pcm)
+import Data.MediaBus.Media.Blank (CanBeBlank (..))
 import Data.MediaBus.Media.Channels
-import Data.Typeable
+  ( EachChannel (..),
+    KnownChannelLayout (..),
+  )
+import Data.Typeable (Typeable)
 import Foreign.Storable
+  ( Storable (alignment, peekByteOff, pokeByteOff, sizeOf),
+  )
 import GHC.Generics (Generic)
-import Test.QuickCheck
+import Test.QuickCheck (Arbitrary (arbitrary))
 
 -- | The channel layout indicator type for **stereo** audio
 data Stereo
@@ -20,11 +25,10 @@ data Stereo
 instance KnownChannelLayout Stereo where
   numberOfChannels _ = 2
 
-data instance Pcm Stereo t
-  = MkStereo
-      { _leftSample :: !t,
-        _rightSample :: !t
-      }
+data instance Pcm Stereo t = MkStereo
+  { _leftSample :: !t,
+    _rightSample :: !t
+  }
   deriving (Eq, Ord, Generic, Typeable)
 
 instance

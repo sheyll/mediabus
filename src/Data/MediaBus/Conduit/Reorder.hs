@@ -5,23 +5,36 @@ module Data.MediaBus.Conduit.Reorder
   )
 where
 
-import Conduit
+import Conduit (ConduitT, awaitForever, evalStateC, yield)
 import Control.Lens
-import Control.Monad.State.Strict
-import Data.Default
+  ( Lens',
+    makeLenses,
+    use,
+    view,
+    (%=),
+    (&),
+    (.=),
+    (.~),
+    (<+=),
+    (<<.=),
+    (^.),
+  )
+import Control.Monad.State.Strict (MonadState (put), when)
+import Data.Default (Default (..))
 import Data.MediaBus.Basics.OrderedBy
-import Data.MediaBus.Basics.Sequence
-import Data.MediaBus.Basics.Series
-import Data.MediaBus.Media.Stream
+  ( OrderedBy (MkOrderedBy, orderedByValue),
+  )
+import Data.MediaBus.Basics.Sequence (HasSeqNum (seqNum))
+import Data.MediaBus.Basics.Series (Series (Start))
+import Data.MediaBus.Media.Stream (Stream (MkStream))
 import qualified Data.Set as Set
 
-data ReorderSt a b c
-  = MkReorderSt
-      { _expectedRank :: !a,
-        _frameQueue :: !(Set.Set (OrderedBy a b)),
-        _frameDrops :: !Int,
-        _lastFrameCtx :: !c
-      }
+data ReorderSt a b c = MkReorderSt
+  { _expectedRank :: !a,
+    _frameQueue :: !(Set.Set (OrderedBy a b)),
+    _frameDrops :: !Int,
+    _lastFrameCtx :: !c
+  }
 
 makeLenses ''ReorderSt
 

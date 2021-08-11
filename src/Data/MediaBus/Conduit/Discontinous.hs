@@ -6,10 +6,10 @@ where
 
 import Conduit
 import Control.Parallel.Strategies (NFData)
-import Data.MediaBus.Conduit.Stream
-import Data.MediaBus.Media.Blank
-import Data.MediaBus.Media.Discontinous
-import Data.MediaBus.Media.Stream
+import Data.MediaBus.Conduit.Stream (mapFrameContentC')
+import Data.MediaBus.Media.Blank (CanBeBlank (..))
+import Data.MediaBus.Media.Discontinous (Discontinous (..))
+import Data.MediaBus.Media.Stream (Stream)
 
 -- | Replace 'Missing' parts with the given concealment value.
 concealMissing ::

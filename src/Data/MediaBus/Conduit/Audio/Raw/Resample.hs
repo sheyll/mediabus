@@ -4,21 +4,35 @@ module Data.MediaBus.Conduit.Audio.Raw.Resample
   )
 where
 
-import Conduit
-import Control.Lens
+import Conduit (ConduitT, evalStateC)
+import Control.Lens (mapMOf, (^.))
 import Control.Monad.ST (ST)
 import Control.Monad.State.Strict
+  ( MonadState (get, put),
+    StateT,
+    void,
+    when,
+  )
 import Control.Parallel.Strategies
   ( NFData,
     rdeepseq,
     using,
   )
-import Data.MediaBus.Basics.Ticks
-import Data.MediaBus.Conduit.Stream
-import Data.MediaBus.Media.Audio.Raw
+import Data.MediaBus.Basics.Ticks (HasRate (..), Hz)
+import Data.MediaBus.Conduit.Stream (mapFrameContentMC')
+import Data.MediaBus.Media.Audio.Raw (IsPcmValue (..), Pcm)
 import Data.MediaBus.Media.Buffer
+  ( HasMediaBuffer (mediaBuffer),
+    HasMediaBufferL,
+    MediaBuffer,
+    createMediaBuffer,
+    mediaBufferVector,
+  )
 import Data.MediaBus.Media.Samples
-import Data.MediaBus.Media.Stream
+  ( EachSample (SamplesFrom, SamplesTo),
+    EachSampleL,
+  )
+import Data.MediaBus.Media.Stream (Stream)
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.Mutable as M
 

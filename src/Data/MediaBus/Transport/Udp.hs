@@ -1,21 +1,56 @@
 module Data.MediaBus.Transport.Udp (udpDatagramSource) where
 
 import Conduit
+  ( ConduitT,
+    MonadResource,
+    MonadTrans (lift),
+    awaitForever,
+    bracketP,
+    evalStateC,
+    (.|),
+  )
 import Control.Lens
-import Control.Monad.State.Strict
+  ( Field1 (_1),
+    Field2 (_2),
+    Field3 (_3),
+    use,
+    (.=),
+    (<<+=),
+    (<<.=),
+  )
+import Control.Monad.Logger (MonadLogger, logDebug, logInfo)
+import Control.Monad.State.Strict (unless, when)
 import qualified Data.ByteString as B
 import Data.Conduit.Network.UDP
-import Data.Default
+  ( HostPreference,
+    Message (msgData, msgSender),
+    sourceSocket,
+  )
+import Data.Default (Default (..))
 import Data.MediaBus.Basics.Clock
-import Data.MediaBus.Basics.Sequence
-import Data.MediaBus.Basics.SourceId
+  ( IsClock
+      ( ClockTimeDiff,
+        MonadClock,
+        diffTime,
+        now,
+        timeAsTimeDiff
+      ),
+  )
+import Data.MediaBus.Basics.Sequence (SeqNum)
+import Data.MediaBus.Basics.SourceId (SourceId (MkSourceId))
 import Data.MediaBus.Conduit.Stream
+  ( yieldNextFrame,
+    yieldStartFrameCtx,
+  )
 import Data.MediaBus.Media.Stream
-import Data.Streaming.Network
+  ( Frame (MkFrame),
+    FrameCtx (MkFrameCtx),
+    Stream,
+  )
+import Data.Streaming.Network (bindPortUDP)
+import Data.String (IsString (fromString))
 import Network.Socket (SockAddr, close)
-import Control.Monad.Logger (logInfo, MonadLogger, logDebug)
 import Text.Printf (printf)
-import Data.String (IsString(fromString))
 
 -- | A UDP source that uses 'MonandResource' to make sure the socket is closed.
 udpDatagramSource ::
@@ -49,5 +84,5 @@ udpDatagramSource _clk port host = do
           )
       sn <- _2 <<+= 1
       tStart <- use _3
-      unless (Just currentSender /= lastSender)  ($logDebug yieldMsg)
+      unless (Just currentSender /= lastSender) ($logDebug yieldMsg)
       yieldNextFrame (MkFrame (diffTime tNow tStart) sn (msgData m))

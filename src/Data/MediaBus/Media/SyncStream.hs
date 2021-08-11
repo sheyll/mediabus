@@ -17,9 +17,17 @@ module Data.MediaBus.Media.SyncStream
   )
 where
 
-import Data.MediaBus.Basics.Series
+import Data.MediaBus.Basics.Series (Series (Next, Start))
 import Data.MediaBus.Basics.Ticks
+  ( CanBeTicks,
+    HasDuration (getDurationTicks),
+    Ticks,
+  )
 import Data.MediaBus.Media.Stream
+  ( Frame (MkFrame),
+    FrameCtx (MkFrameCtx),
+    Stream (MkStream),
+  )
 
 -- | A 'Stream' without sequence numbers and time stamps is called a
 -- 'SyncStream', which is the abbreviation of /synchronous stream/, because
