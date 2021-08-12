@@ -22,7 +22,10 @@ where
 import Control.DeepSeq (NFData)
 import Control.Lens
   ( Each (..),
+    Index,
     Iso,
+    IxValue,
+    Ixed (ix),
     Lens,
     Lens',
     iso,
@@ -34,11 +37,13 @@ import Control.Monad.ST (ST, runST)
 import qualified Data.ByteString as B
 import Data.Default (Default (..))
 import Data.MediaBus.Media.Samples (CanBeSample)
-import Data.Typeable (Proxy (..), typeRep)
+import Data.Typeable (Proxy (..), typeRep, Typeable)
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.ByteString as Spool
+import Foreign.Storable
 import GHC.Exts (IsList (..))
 import GHC.Generics (Generic)
+import Test.QuickCheck
 
 -- ** Types using 'MediaBuffer'
 
@@ -80,17 +85,26 @@ newtype MediaBuffer t = MkMediaBuffer
 mediaBufferVector :: Iso (MediaBuffer s) (MediaBuffer t) (V.Vector s) (V.Vector t)
 mediaBufferVector = iso _mediaBufferVector MkMediaBuffer
 
--- | Traversal instance
+-- ** Instances
+
+instance (Storable t, Arbitrary t) => Arbitrary (MediaBuffer t) where
+  arbitrary = mediaBufferFromList <$> listOf arbitrary
+
 instance
   (V.Storable a, V.Storable b) =>
   Each (MediaBuffer a) (MediaBuffer b) a b
   where
   each = mediaBufferVector . each
 
--- ** Instances
+type instance IxValue (MediaBuffer a) = a
+
+type instance Index (MediaBuffer a) = Int
+
+instance Storable a => Ixed (MediaBuffer a) where
+  ix i = mediaBufferVector . ix i
 
 instance
-  CanBeSample s =>
+  Storable s =>
   IsList (MediaBuffer s)
   where
   type Item (MediaBuffer s) = s
@@ -98,7 +112,7 @@ instance
   toList = mediaBufferToList
 
 instance
-  (Show a, CanBeSample a) =>
+  (Show a, Typeable a, Storable a) =>
   Show (MediaBuffer a)
   where
   showsPrec d m =
@@ -109,14 +123,14 @@ instance
         . showsPrec 8 (typeRep (Proxy :: Proxy a))
 
 instance
-  CanBeSample sampleType =>
+  (Storable sampleType, Monoid sampleType) =>
   Default (MediaBuffer sampleType)
   where
   def = mempty
 
 -- | Return the number of 'BufferElement's in the 'MediaBuffer' buffer.
 mediaBufferLength ::
-  CanBeSample t =>
+  Storable t =>
   MediaBuffer t ->
   Int
 mediaBufferLength = view (mediaBufferVector . to V.length)
@@ -127,14 +141,14 @@ mediaBufferLength = view (mediaBufferVector . to V.length)
 
 -- | Convert the media buffer vector contents to a list in O(n).
 mediaBufferToList ::
-  CanBeSample s =>
+  Storable s =>
   MediaBuffer s ->
   [s]
 mediaBufferToList = view (mediaBufferVector . to V.toList)
 
 -- | Create a 'MediaBuffer' from a list in O(n).
 mediaBufferFromList ::
-  CanBeSample s =>
+  Storable s =>
   [s] ->
   MediaBuffer s
 mediaBufferFromList = MkMediaBuffer . V.fromList
@@ -143,14 +157,14 @@ mediaBufferFromList = MkMediaBuffer . V.fromList
 
 -- | An efficient conversion of a 'ByteString' to a 'MediaBuffer'
 mediaBufferFromByteString ::
-  CanBeSample a =>
+  Storable a =>
   B.ByteString ->
   MediaBuffer a
 mediaBufferFromByteString = MkMediaBuffer . Spool.byteStringToVector
 
 -- | An efficient conversion of a 'MediaBuffer' to a 'ByteString'
 mediaBufferToByteString ::
-  CanBeSample a =>
+  Storable a =>
   MediaBuffer a ->
   B.ByteString
 mediaBufferToByteString = Spool.vectorToByteString . _mediaBufferVector
@@ -160,7 +174,7 @@ mediaBufferToByteString = Spool.vectorToByteString . _mediaBufferVector
 -- | Create a new 'MediaBuffer' using an 'ST` action that returns a mutable
 -- 'MVector'.
 createMediaBuffer ::
-  CanBeSample t =>
+  Storable t =>
   (forall s. ST s (V.MVector s t)) ->
   MediaBuffer t
 createMediaBuffer f = MkMediaBuffer (V.create f)
@@ -171,7 +185,7 @@ createMediaBuffer f = MkMediaBuffer (V.create f)
 -- applied to the mutable vector of that 'MediaBuffer'. The function must result
 -- in a 'ST' action that does the modifications.
 modifyMediaBuffer ::
-  CanBeSample a =>
+  Storable a =>
   (forall s. V.MVector s a -> ST s ()) ->
   MediaBuffer a ->
   MediaBuffer a
@@ -183,7 +197,7 @@ modifyMediaBuffer f = over mediaBufferVector (V.modify f)
 --
 -- Unsafe because results can be returned, so the /thawn/ mutable vector might escape.
 unsafeModifyMediaBuffer ::
-  CanBeSample a =>
+  Storable a =>
   (forall s. V.MVector s a -> ST s r) ->
   MediaBuffer a ->
   (r, MediaBuffer a)

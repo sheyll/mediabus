@@ -45,7 +45,8 @@ import Data.MediaBus.Media.Segment
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.Mutable as M
-import Test.QuickCheck (Arbitrary)
+import Foreign (Storable)
+import Test.QuickCheck (Arbitrary (arbitrary))
 
 -- | An indicator for uncompressed audio with a given per sample encoding type.
 data Raw encoding
@@ -66,6 +67,9 @@ class
 
 -- | All 'Pcm' audio is audio. An 'Audio' instance with 'Pcm's in a 'MediaBuffer'.
 newtype instance Audio r c (Raw t) = MkPcm {_pcmMediaBuffer :: MediaBuffer (Pcm c t)}
+
+instance (Storable (Pcm c t), Arbitrary (Pcm c t)) => Arbitrary (Audio r c (Raw t)) where
+  arbitrary = MkPcm <$> arbitrary
 
 -- | An isomorphism for 'Audio' and 'MediaBuffer'
 pcmMediaBuffer :: Iso (Audio r c (Raw t)) (Audio r' c' (Raw t')) (MediaBuffer (Pcm c t)) (MediaBuffer (Pcm c' t'))
@@ -92,13 +96,13 @@ instance
      in pd * n
 
 instance
-  CanBeSample (Pcm c t) =>
+  NFData (Pcm c t) =>
   NFData (Audio r c (Raw t))
   where
   rnf (MkPcm !buf) = rnf buf
 
 instance
-  CanBeSample (Pcm c t) =>
+  (Eq (Pcm c t), Storable (Pcm c t)) =>
   Eq (Audio r c (Raw t))
   where
   (==) (MkPcm !buf1) (MkPcm !buf2) = buf1 == buf2
