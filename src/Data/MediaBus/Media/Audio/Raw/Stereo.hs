@@ -13,12 +13,12 @@ import Data.MediaBus.Media.Channels
     KnownChannelLayout (..),
   )
 import Data.Typeable (Typeable)
+import Foreign.Ptr
 import Foreign.Storable
   ( Storable (alignment, peekByteOff, pokeByteOff, sizeOf),
   )
 import GHC.Generics (Generic)
 import Test.QuickCheck (Arbitrary (arbitrary))
-import Foreign.Ptr
 
 -- | The channel layout indicator type for **stereo** audio
 data Stereo
@@ -81,19 +81,17 @@ instance
   Storable (Pcm Stereo s)
   where
   sizeOf _ = 2 * sizeOf (undefined :: s)
-  alignment = alignment
+  alignment _ = alignment (undefined :: s)
   peekByteOff ptr off = do
-    let
-      sPtr :: Ptr s
-      sPtr = castPtr ptr
+    let sPtr :: Ptr s
+        sPtr = castPtr ptr
     l <- peekByteOff sPtr off
     let rOffset = sizeOf l
     r <- peekByteOff sPtr (rOffset + off)
     return (MkStereo l r)
   pokeByteOff ptr off (MkStereo l r) = do
-    let
-      sPtr :: Ptr s
-      sPtr = castPtr ptr
+    let sPtr :: Ptr s
+        sPtr = castPtr ptr
     pokeByteOff sPtr off l
     let rOffset = sizeOf l
     pokeByteOff sPtr (off + rOffset) r
