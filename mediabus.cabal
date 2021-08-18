@@ -98,9 +98,9 @@ library
   build-depends:       QuickCheck
                      , array
                      , async
-                     , base >= 4.12 && < 5
+                     , base ^>= 4.14
                      , bytestring
-                     , bytestring-to-vector >= 0.3
+                     , bytestring-to-vector ^>= 0.3
                      , cereal
                      , conduit
                      , conduit-combinators
@@ -115,7 +115,7 @@ library
                      , parallel
                      , primitive
                      , process
-                     , random
+                     , random ^>= 1.2
                      , resourcet
                      , stm
                      , streaming-commons
@@ -123,7 +123,7 @@ library
                      , text
                      , time
                      , transformers
-                     , unliftio >= 0.2 && < 0.3
+                     , unliftio ^>= 0.2
                      , vector < 13
 
 test-suite tests
@@ -151,10 +151,10 @@ test-suite tests
   build-depends:       QuickCheck
                      , array
                      , async
-                     , base >= 4.12 && < 5
+                     , base ^>= 4.14
                      , binary
                      , bytestring
-                     , bytestring-to-vector >= 0.3
+                     , bytestring-to-vector ^>= 0.3
                      , conduit
                      , conduit-combinators
                      , conduit-extra
@@ -173,7 +173,7 @@ test-suite tests
                      , time
                      , transformers
                      , type-spec
-                     , unliftio >= 0.2 && < 0.3
+                     , unliftio ^>= 0.2
                      , vector < 13
 
   default-extensions:  ApplicativeDo

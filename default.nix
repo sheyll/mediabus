@@ -15,22 +15,20 @@ let
         modules =
           [
             {
-              # HACK make 'cabal test' work
-              # https://github.com/input-output-hk/haskell.nix/issues/231#issuecomment-731699727
-              packages.mediabus.components.tests.tests.build-tools = [
-                this.hsPkgs.hspec-discover
-              ];
-              # END OF HACK
-              packages.mediabus.allComponent = {
+              packages.mediabus.components.tests.tests = {
+                # HACK make 'cabal test' work
+                # https://github.com/input-output-hk/haskell.nix/issues/231#issuecomment-731699727
+                build-tools = [
+                  this.hsPkgs.hspec-discover
+                ];
+                # END OF HACK
                 enableExecutableProfiling = withProfiling;
+                ghcOptions = if withProfiling then [ "-fprof-auto" ] else [];
+              };
+              packages.mediabus.components.library = {
                 enableLibraryProfiling = withProfiling;
-              } // (
-                if withProfiling then
-                  {
-                    ghcOptions = "-fprof-auto";
-                  }
-                else {}
-              );
+                ghcOptions = if withProfiling then [ "-fprof-auto" ] else [];
+              };
             }
           ];
       };
