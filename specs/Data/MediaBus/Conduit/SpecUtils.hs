@@ -7,7 +7,6 @@ import Data.MediaBus
 import Data.Proxy
 import qualified Data.Vector.Storable as V
 import Data.Word
-import Test.Hspec
 import Test.QuickCheck
 
 runSegmetCOnTestData ::
