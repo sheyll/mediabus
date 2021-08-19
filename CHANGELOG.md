@@ -1,5 +1,9 @@
 # Changes
 
+## 0.5.0.2
+
+* Fix a small bug in `segmentC` and improve the tests
+
 ## 0.5.0.1
 
 * Adapt to new upstream versions of base and conduit

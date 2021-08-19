@@ -10,16 +10,16 @@ import Data.Word
 import Test.Hspec
 import Test.QuickCheck
 
-withTestData ::
-  HasStaticDuration d =>
+runSegmetCOnTestData ::
+  (KnownRate r, HasStaticDuration d) =>
   [TestLen] ->
   PT d ->
-  ( [Stream () Word8 (Ticks (Hz 8000) Word32) () (Audio (Hz 8000) Mono (Raw S16))] ->
-    [Stream () Word8 (Ticks (Hz 8000) Word32) () (Segment d (Audio (Hz 8000) Mono (Raw S16)))] ->
+  ( [Stream () Word8 (Ticks r Word32) () (Audio r Mono (Raw S16))] ->
+    [Stream () Word8 (Ticks r Word32) () (Segment d (Audio r Mono (Raw S16)))] ->
     res
   ) ->
   res
-withTestData ls pt f =
+runSegmetCOnTestData ls pt f =
   let inputs = mkTestInputs ls
       outputs = runSegmentC inputs pt
    in f inputs outputs
@@ -33,10 +33,10 @@ ticksStrictlyMonotoneIncreasing dur outs =
    in all (== dur) $ zipWith (-) (Prelude.drop 2 res) (Prelude.drop 1 res)
 
 runSegmentC ::
-  (HasStaticDuration d, HasDuration c, CanSegment c, Monoid c) =>
-  [Stream () Word8 (Ticks (Hz 8000) Word32) () c] ->
+  (HasStaticDuration d, HasDuration c, CanSegment c, Monoid c, KnownRate r) =>
+  [Stream () Word8 (Ticks r Word32) () c] ->
   PT d ->
-  [Stream () Word8 (Ticks (Hz 8000) Word32) () (Segment d c)]
+  [Stream () Word8 (Ticks r Word32) () (Segment d c)]
 runSegmentC inputs _p =
   runConduitPure
     ( sourceList inputs
@@ -44,9 +44,9 @@ runSegmentC inputs _p =
         .| consume
     )
 
-mkTestInputs ::
+mkTestInputs ::  KnownRate r =>
   [TestLen] ->
-  [Stream () Word8 (Ticks (Hz 8000) Word32) () (Audio (Hz 8000) Mono (Raw S16))]
+  [Stream () Word8 (Ticks r Word32) () (Audio r Mono (Raw S16))]
 mkTestInputs =
   reverse
     . snd
@@ -59,7 +59,14 @@ mkTestInputs =
       ((0, 0), [mkTestStartPacket])
   where
     mkTestPacket sn ts len =
-      MkStream (Next (MkFrame ts sn (pcmMediaBuffer . mediaBufferVector # (V.replicate len 0))))
+      MkStream
+        ( Next
+            ( MkFrame
+                ts
+                sn
+                (pcmMediaBuffer . mediaBufferVector # V.replicate len 0)
+            )
+        )
     mkTestStartPacket = MkStream (Start (MkFrameCtx () 0 0 ()))
 
 data PT d where
@@ -67,6 +74,8 @@ data PT d where
   PT5 :: PT (5 :/ Hz 1000)
   PT10 :: PT (80 :/ Hz 8000)
   PT20 :: PT (320 :/ Hz 16000)
+  PT1024 :: PT (16384 :/ Hz 16000)
+  PT2048 :: PT (32768 :/ Hz 16000)
 
 instance
   HasStaticDuration d =>

@@ -18,6 +18,7 @@ import Control.Lens
     (.=),
     (<<.=),
   )
+import Control.Monad (when)
 import Control.Parallel.Strategies (NFData)
 import Data.Default (Default)
 import Data.MediaBus.Basics.Series (Series (Next, Start))
@@ -77,7 +78,9 @@ segmentC' ::
     (Stream i s (Ticks r t) p (Segment d c))
     m
     ()
-segmentC' dpx = evalStateC (0, Nothing) $ awaitForever go
+segmentC' dpx =
+  when (segmentDuration > 0) $
+    evalStateC (0, Nothing) $ awaitForever go
   where
     segmentDurationInTicks = nominalDiffTime # segmentDuration
     segmentDuration = getStaticDuration dpx
