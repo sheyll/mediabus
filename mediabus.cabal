@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                mediabus
-version:             0.6.0
+version:             0.7.0
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/sheyll/mediabus

@@ -1,5 +1,9 @@
 # Changes
 
+## 0.7.0
+
+* Streamline and simplify `aggregateDurationC` and `aggregateCountC`
+
 ## 0.6.0
 
 * Add buffer aggregation.

@@ -27,24 +27,21 @@ import Test.QuickCheck
 spec :: Spec
 spec = do
   describe "aggregateCountC" $ do
-    it "uses the sequence number and time stamp from the first frame in each aggregate" $
+    it "basically works" $
       let testInputs :: [Stream Int Word32 (Ticks (Hz 1) Word32) (Maybe String) (PT (1 :/ Hz 1))]
           testInputs =
-             fmap
+            fmap
               MkStream
               [ Start (MkFrameCtx 7443 1000 200 (Just "start")),
                 Next (MkFrame 1000 200 PT1),
                 Next (MkFrame 1001 201 PT1),
                 Next (MkFrame 1002 202 PT1),
-
                 Next (MkFrame 1003 666 PT1),
                 Next (MkFrame 1004 2341241 PT1),
                 Next (MkFrame 1005 205 PT1),
-
                 Next (MkFrame 7777 206 PT1),
                 Next (MkFrame 7777 207 PT1),
-                Next (MkFrame 7_777 208 PT1)
-
+                Next (MkFrame 7777 208 PT1)
               ]
           aggregationDuration = 3
           outputs =
@@ -56,15 +53,39 @@ spec = do
        in outputs
             `shouldBe` fmap
               MkStream
-              [ Start (MkFrameCtx 7443 1000 200 (Just "start")),
-                Next (MkFrame 1000 200 [PT1, PT1,PT1]),
-                Next (MkFrame 1003 666 [PT1,PT1,PT1]),
-                Next (MkFrame 7777 206 [PT1, PT1, PT1])
+              [ Start (MkFrameCtx 7443 () () (Just "start")),
+                Next
+                  ( MkFrame
+                      ()
+                      ()
+                      [ MkFrame 1000 200 PT1,
+                        MkFrame 1001 201 PT1,
+                        MkFrame 1002 202 PT1
+                      ]
+                  ),
+                Next
+                  ( MkFrame
+                      ()
+                      ()
+                      [ MkFrame 1003 666 PT1,
+                        MkFrame 1004 2341241 PT1,
+                        MkFrame 1005 205 PT1
+                      ]
+                  ),
+                Next
+                  ( MkFrame
+                      ()
+                      ()
+                      [ MkFrame 7777 206 PT1,
+                        MkFrame 7777 207 PT1,
+                        MkFrame 7_777 208 PT1
+                      ]
+                  )
               ]
     it "flushes the accumulated buffers when a start frame arives" $
       let testInputs :: [Stream Int Word32 (Ticks (Hz 1) Word32) (Maybe String) (PT (1 :/ Hz 1))]
           testInputs =
-             fmap
+            fmap
               MkStream
               [ Start (MkFrameCtx 7443 1000 200 (Just "start1")),
                 Next (MkFrame 1000 200 PT1),
@@ -89,14 +110,36 @@ spec = do
        in outputs
             `shouldBe` fmap
               MkStream
-              [ Start (MkFrameCtx 7443 1000 200 (Just "start1")),
-                Next (MkFrame 1000 200 [PT1,PT1]),
-                Start (MkFrameCtx 4516 15200 20 (Just "start2")),
-                Next (MkFrame 1002 202 [PT1]),
-                Start (MkFrameCtx 4516 15200 20 (Just "start3")),
-                Start (MkFrameCtx 43516 1200 56 (Just "start4")),
-                Next (MkFrame 1003 666 [PT1,PT1,PT1]),
-                Next (MkFrame 7777 206 [PT1,PT1])
+              [ Start (MkFrameCtx 7443 () () (Just "start1")),
+                Next
+                  ( MkFrame
+                      ()
+                      ()
+                      [ MkFrame 1000 200 PT1,
+                        MkFrame 1001 201 PT1
+                      ]
+                  ),
+                Start (MkFrameCtx 4516 () () (Just "start2")),
+                Next (MkFrame () () [MkFrame 1002 202 PT1]),
+                Start (MkFrameCtx 4516 () () (Just "start3")),
+                Start (MkFrameCtx 43516 () () (Just "start4")),
+                Next
+                  ( MkFrame
+                      ()
+                      ()
+                      [ MkFrame 1003 666 PT1,
+                        MkFrame 1004 2341241 PT1,
+                        MkFrame 1005 205 PT1
+                      ]
+                  ),
+                Next
+                  ( MkFrame
+                      ()
+                      ()
+                      [ MkFrame 7777 206 PT1,
+                        MkFrame 7777 207 PT1
+                      ]
+                  )
               ]
     it "when aggregating n frames, it generates k output frames for (n * k) input frames" $
       property $ \(Positive n) (Positive k) ->
@@ -142,14 +185,16 @@ spec = do
                           (n * k)
                           (MkTestLen (fromIntegral inputDuration))
                       )
-                  aggregationDuration = fromIntegral n * mkTicks32At16000 inputDuration
+                  aggregationDuration =
+                    view
+                      nominalDiffTime
+                      (fromIntegral n * mkTicks32At16000 inputDuration)
                   outputs =
                     runConduitPure
                       ( sourceList inputs
                           .| aggregateDurationC @[] aggregationDuration
                           .| consume
                       )
-                  targetDurationSecs = view nominalDiffTime aggregationDuration
                in length (toListOf (each . eachFramePayload) outputs) === k
 
     it "groups frames into the given duration, as good as possible" $
@@ -158,10 +203,10 @@ spec = do
             outputs =
               runConduitPure
                 ( sourceList inputs
-                    .| aggregateDurationC @[] aggregationDuration
+                    .| aggregateDurationC @[] aggregateDurationSecs
                     .| consume
                 )
-            targetDurationSecs = view nominalDiffTime aggregationDuration
+            aggregateDurationSecs = view nominalDiffTime aggregationDuration
             totalOutputDuration =
               sumOf
                 (each . eachFramePayload . folded . to getDuration)
@@ -173,11 +218,11 @@ spec = do
                 then totalOutputDuration === 0
                 else
                   classify
-                    (totalInputDuration < targetDurationSecs)
+                    (totalInputDuration < aggregateDurationSecs)
                     "less input that aggregation duration"
                     (totalInputDuration === totalOutputDuration)
                     .&&. classify
-                      (totalInputDuration >= targetDurationSecs)
+                      (totalInputDuration >= aggregateDurationSecs)
                       "more input that aggregation duration"
                       (totalInputDuration === totalOutputDuration)
     it "flushes the accumulated buffers when a start frame arives" $
@@ -189,49 +234,15 @@ spec = do
           outputs =
             runConduitPure
               ( sourceList (testInputs0 ++ testInputs1)
-                  .| aggregateDurationC @[] aggregationDuration
+                  .| aggregateDurationC @[] (aggregationDuration ^. nominalDiffTime)
                   .| consume
               )
        in outputs
             `shouldBe` fmap
               MkStream
-              [ Start (MkFrameCtx () 0 0 ()),
-                Next (MkFrame 0 0 (toListOf (each . eachFramePayload) testInputs0)),
-                Start (MkFrameCtx () 0 0 ()),
-                Next (MkFrame 0 0 (Prelude.take 3 (toListOf (each . eachFramePayload) testInputs1))),
-                Next (MkFrame 3 3 (Prelude.drop 3 (toListOf (each . eachFramePayload) testInputs1)))
-              ]
-    it "uses the sequence number and time stamp from the first frame in each aggregate" $
-      let testInputs :: [Stream Int Word32 (Ticks (Hz 1) Word32) (Maybe String) (PT (1 :/ Hz 1))]
-          testInputs =
-             fmap
-              MkStream
-              [ Start (MkFrameCtx 7443 1000 200 (Just "start")),
-                Next (MkFrame 1000 200 PT1),
-                Next (MkFrame 1001 201 PT1),
-                Next (MkFrame 1002 202 PT1),
-
-                Next (MkFrame 1003 666 PT1),
-                Next (MkFrame 1004 2341241 PT1),
-                Next (MkFrame 1005 205 PT1),
-
-                Next (MkFrame 7777 206 PT1),
-                Next (MkFrame 7777 207 PT1),
-                Next (MkFrame 7_777 208 PT1)
-
-              ]
-          aggregationDuration = MkTicks @(Hz 1) @Word32 3
-          outputs =
-            runConduitPure
-              ( sourceList testInputs
-                  .| aggregateDurationC @[] aggregationDuration
-                  .| consume
-              )
-       in outputs
-            `shouldBe` fmap
-              MkStream
-              [ Start (MkFrameCtx 7443 1000 200 (Just "start")),
-                Next (MkFrame 1000 200 [PT1, PT1,PT1]),
-                Next (MkFrame 1003 666 [PT1,PT1,PT1]),
-                Next (MkFrame 7777 206 [PT1, PT1, PT1])
+              [ Start (MkFrameCtx () () () ()),
+                Next (MkFrame () () (takeFrames testInputs0)),
+                Start (MkFrameCtx () () () ()),
+                Next (MkFrame () () (Prelude.take 3 (takeFrames testInputs1))),
+                Next (MkFrame () () (Prelude.drop 3 (takeFrames testInputs1)))
               ]

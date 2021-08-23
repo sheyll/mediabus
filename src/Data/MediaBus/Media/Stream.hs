@@ -18,21 +18,30 @@ module Data.MediaBus.Media.Stream
     Stream (..),
     type Streamish,
     stream,
+    takeStartFrames,
+    takeFrames,
   )
 where
 
 import Control.DeepSeq (NFData)
 import Control.Lens
   ( Bifunctor,
+    Each (each),
     Traversal,
     makeLenses,
     over,
     preview,
+    toListOf,
   )
 import Data.Bifunctor (Bifunctor (first, second))
 import Data.Default (Default (..))
 import Data.MediaBus.Basics.Sequence (HasSeqNum (..))
-import Data.MediaBus.Basics.Series (Series (Next), _Next, _Start)
+import Data.MediaBus.Basics.Series
+  ( AsSeries (seriesNext', seriesStart'),
+    Series (Next),
+    _Next,
+    _Start,
+  )
 import Data.MediaBus.Basics.Ticks
   ( HasDuration (getDuration),
     HasStaticDuration (..),
@@ -302,3 +311,13 @@ instance
   Show (Stream i s t p c)
   where
   showsPrec d (MkStream s) = showsPrec d s
+
+instance AsSeries (Stream i s t p c) (FrameCtx i s t p) (Frame s t c) where
+  seriesStart' = stream . seriesStart'
+  seriesNext' = stream . seriesNext'
+
+takeFrames :: [Stream i s t p c] -> [Frame s t c]
+takeFrames = toListOf (each . seriesNext')
+
+takeStartFrames :: [Stream i s t p c] -> [FrameCtx i s t p]
+takeStartFrames = toListOf (each . seriesStart')

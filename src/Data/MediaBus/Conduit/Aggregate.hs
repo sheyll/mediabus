@@ -14,20 +14,19 @@ import Control.Lens
 import Data.MediaBus.Basics.Monotone (LocalOrd)
 import Data.MediaBus.Basics.Series (Series (Next, Start))
 import Data.MediaBus.Basics.Ticks
-  ( CanBeTicks,
-    HasDuration (..),
-    HasTimestamp (timestamp'),
-    Ticks,
+  ( HasDuration (..),
   )
 import Data.MediaBus.Conduit.Stream
-  ( yieldNextFrame, yieldStartFrameCtx
+  ( yieldNextFrame,
+    yieldStartFrameCtx,
   )
 import Data.MediaBus.Media.Stream
   ( Frame (MkFrame),
     Stream (MkStream),
-    framePayload,
-    frameSeqNum,
+    frameCtxSeqNumRef,
+    frameCtxTimestampRef,
   )
+import Data.Time (NominalDiffTime)
 import Numeric.Natural (Natural)
 
 -- | Group content frames into a list of frames such that the total duration
@@ -36,27 +35,21 @@ import Numeric.Natural (Natural)
 -- If you want a specific number of contents, and the contents have no 'HasDuration'
 -- instance, use 'aggregateCountC'.
 --
--- The sequence numbers are taken from the the first content of each aggregate,
--- and thus may not be monotonic incrementing by one.
---
--- The timestamps are taken from the the first content of each aggregate.
---
 -- When a start frame is received, the current aggregate is sent,
 -- even if it is incomplete, and the start frame is passed through.
 aggregateDurationC ::
-  forall f i s r t p c m.
+  forall f i s t p c m.
   ( Monad m,
     HasDuration c,
     Applicative f,
-    Semigroup (f c),
-    LocalOrd t,
-    CanBeTicks r t
+    Semigroup (f (Frame s t c)),
+    LocalOrd t
   ) =>
   -- | The minimum total duration of the list of payloads.
-  Ticks r t ->
+  NominalDiffTime ->
   ConduitT
-    (Stream i s (Ticks r t) p c)
-    (Stream i s (Ticks r t) p (f c))
+    (Stream i s t p c)
+    (Stream i () () p (f (Frame s t c)))
     m
     ()
 aggregateDurationC t = go Nothing 0
@@ -70,15 +63,18 @@ aggregateDurationC t = go Nothing 0
 
         handleStart f = do
           yieldAccum mAcc0
-          yieldStartFrameCtx f
+          yieldStartFrameCtx
+            ( f & frameCtxSeqNumRef .~ ()
+                & frameCtxTimestampRef .~ ()
+            )
           go Nothing 0
 
-        handleNext (MkFrame !fSeq !fTs !fContent) =
-          let !accDur = accDur0 + getDurationTicks fContent
+        handleNext f =
+          let !accDur = accDur0 + getDuration f
               !acc =
                 maybe
-                  (Just (fSeq, fTs, pure fContent))
-                  (Just . over _3 (<> pure fContent))
+                  (Just (pure f))
+                  (Just . (<> pure f))
                   mAcc0
            in if accDur < t
                 then go acc accDur
@@ -88,31 +84,26 @@ aggregateDurationC t = go Nothing 0
 
     yieldAccum = \case
       Nothing -> return ()
-      Just (!s, !ts, !c) -> yieldNextFrame (MkFrame s ts c)
+      Just !c -> yieldNextFrame (MkFrame () () c)
 
--- | Group a specific count of content frames into a list of frames.
+-- | Group a specific number of content frames into a list of frames.
 --
--- If you want a specific duration of contents, and the contents have a 'HasDuration'
--- instance, use 'aggregateDurationC'.
---
--- The sequence numbers are taken from the the first content of each aggregate,
--- and thus may not be monotonic incrementing by one.
---
--- The timestamps are taken from the the first content of each aggregate.
+-- If you want to aggregate a specific duration of contents, and the
+-- contents have a 'HasDuration' instance, use 'aggregateDurationC'.
 --
 -- When a start frame is received, the current aggregate is sent,
 -- even if it is incomplete, and the start frame is passed through.
 aggregateCountC ::
   forall f i s t p c m.
   ( Monad m,
-    Semigroup (f c),
+    Semigroup (f (Frame s t c)),
     Applicative f
   ) =>
   -- | The minimum total duration of the list of payloads.
   Natural ->
   ConduitT
     (Stream i s t p c)
-    (Stream i s t p (f c))
+    (Stream i () () p (f (Frame s t c)))
     m
     ()
 aggregateCountC maxCount = go Nothing 0
@@ -126,15 +117,18 @@ aggregateCountC maxCount = go Nothing 0
 
         handleStart pl = do
           yieldAccum mAcc0
-          yieldStartFrameCtx pl
+          yieldStartFrameCtx
+            ( pl & frameCtxTimestampRef .~ ()
+                & frameCtxSeqNumRef .~ ()
+            )
           go Nothing 0
 
         handleNext f =
           let !counter = counter0 + 1
               !acc =
                 maybe
-                  (Just (view timestamp' f, view frameSeqNum f, pure (view framePayload f)))
-                  (Just . over _3 (<> pure (view framePayload f)))
+                  (Just (pure f))
+                  (Just . (<> pure f))
                   mAcc0
            in if counter < maxCount
                 then go acc counter
@@ -144,4 +138,4 @@ aggregateCountC maxCount = go Nothing 0
 
     yieldAccum = \case
       Nothing -> return ()
-      Just (s, ts, c) -> yieldNextFrame (MkFrame s ts c)
+      Just c -> yieldNextFrame (MkFrame () () c)
