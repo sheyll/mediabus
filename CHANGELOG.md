@@ -1,5 +1,9 @@
 # Changes
 
+## 0.8.0
+
+* Add a `HasDuration` implementation for lists
+
 ## 0.7.0
 
 * Streamline and simplify `aggregateDurationC` and `aggregateCountC`
