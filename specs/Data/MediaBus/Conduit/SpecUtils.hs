@@ -70,11 +70,30 @@ mkTestInputs =
 
 data PT d where
   PT0 :: PT (0 :/ Hz 1)
+  PT1 :: PT (1 :/ Hz 1)
   PT5 :: PT (5 :/ Hz 1000)
   PT10 :: PT (80 :/ Hz 8000)
   PT20 :: PT (320 :/ Hz 16000)
   PT1024 :: PT (16384 :/ Hz 16000)
   PT2048 :: PT (32768 :/ Hz 16000)
+
+instance Show (PT d) where
+  show PT0 = "PT0"
+  show PT1 = "PT1"
+  show PT5 = "PT5"
+  show PT10 = "PT10"
+  show PT20 = "PT20"
+  show PT1024 = "PT1024"
+  show PT2048 = "PT2048"
+
+instance Eq (PT d) where
+  PT0 == PT0 = True
+  PT1 == PT1 = True
+  PT5 == PT5 = True
+  PT10 == PT10 = True
+  PT20 == PT20 = True
+  PT1024 == PT1024 = True
+  PT2048 == PT2048 = True
 
 instance
   HasStaticDuration d =>

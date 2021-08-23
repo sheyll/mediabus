@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                mediabus
-version:             0.5.0.2
+version:             0.6.0
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/sheyll/mediabus
@@ -26,6 +26,7 @@ library
                      , Data.MediaBus.Basics.SourceId
                      , Data.MediaBus.Basics.Ticks
                      , Data.MediaBus.Basics.VectorExtra
+                     , Data.MediaBus.Conduit.Aggregate
                      , Data.MediaBus.Conduit.Async
                      , Data.MediaBus.Conduit.Audio.Raw.Alaw
                      , Data.MediaBus.Conduit.Audio.Raw.DebugSink
@@ -131,6 +132,7 @@ test-suite tests
   hs-source-dirs:      specs
   main-is:             Spec.hs
   other-modules:       Data.MediaBus.Basics.TicksSpec
+                     , Data.MediaBus.Conduit.AggregateSpec
                      , Data.MediaBus.Conduit.Audio.Raw.ResampleSpec
                      , Data.MediaBus.Conduit.ReorderSpec
                      , Data.MediaBus.Conduit.FrameRingSpec

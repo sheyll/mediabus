@@ -1,5 +1,9 @@
 # Changes
 
+## 0.6.0
+
+* Add buffer aggregation.
+
 ## 0.5.0.2
 
 * Fix a small bug in `segmentC` and improve the tests
