@@ -2,6 +2,8 @@
 
 ## 0.9.0
 
+* Introduce `logStreamC` a `Stream` logger conduit.
+
 * Improve the aggregation API
   * Add `aggregateByC` for custom aggregation
   * Introduce the `Frames` type for the result of the aggregation

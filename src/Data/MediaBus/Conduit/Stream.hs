@@ -20,6 +20,7 @@ module Data.MediaBus.Conduit.Stream
     foldStream,
     foldStreamM,
     concatStreamContents,
+    logStreamC,
   )
 where
 
@@ -32,11 +33,13 @@ import Conduit
     mapC,
     mapInput,
     mapMC,
+    mapM_C,
     mapOutput,
     yield,
   )
 import Control.Lens (mapMOf, over, (^?))
 import Control.Monad ((>=>))
+import Control.Monad.Logger
 import Control.Monad.Writer.Strict (tell)
 import Control.Parallel.Strategies
   ( NFData,
@@ -56,6 +59,7 @@ import Data.MediaBus.Media.Stream
     framePayload,
     stream,
   )
+import Data.String
 
 -- * Yielding 'Stream' content
 
@@ -212,3 +216,11 @@ concatStreamContents ::
   (Monoid c, Monad m) => ConduitT (Stream i s t p c) Void m c
 concatStreamContents =
   foldStream (fromMaybe mempty . (^? stream . _Next . framePayload))
+
+-- | Log a stream.
+logStreamC ::
+  (Show (Stream i s t p c), Monad m, MonadLogger m) =>
+  (Stream i s t p c -> Maybe LogLevel) ->
+  ConduitT (Stream i s t p c) (Stream i s t p c) m ()
+logStreamC f =
+  mapM_C (\x -> mapM_ (`logOtherN` fromString (show x)) (f x))
