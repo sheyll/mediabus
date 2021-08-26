@@ -11,15 +11,16 @@ spec = do
   it "generates segments with a total duration equal to the input frames" $
     property $
       \ls (outputSegmentDuration :: Ticks64 (Hz 16000)) ->
-        runSegmetCOnTestData @(Hz 16000)
-          ls
-          (outputSegmentDuration ^. nominalDiffTime)
-          ( \inputs outputs ->
-              let inputSum, outputSum :: Ticks64 (Hz 16000)
-                  inputSum = sum (map getDurationTicks inputs)
-                  outputSum = sum (map getDurationTicks outputs)
-               in outputSum === inputSum
-          )
+        outputSegmentDuration > 0
+          ==> runSegmetCOnTestData @(Hz 16000)
+            ls
+            (outputSegmentDuration ^. nominalDiffTime)
+            ( \inputs outputs ->
+                let inputSum, outputSum :: Ticks64 (Hz 16000)
+                    inputSum = sum (map getDurationTicks inputs)
+                    outputSum = sum (map getDurationTicks outputs)
+                 in outputSum === inputSum
+            )
   it "generates incomplete frames with previous left over input when it receives a start frame" $
     property $
       \ls1 ls2 (outputSegmentDuration :: Ticks64 (Hz 16000)) ->

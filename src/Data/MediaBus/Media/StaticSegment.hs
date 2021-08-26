@@ -18,12 +18,10 @@ import Data.MediaBus.Basics.Ticks
     KnownRate,
     KnownStaticTicks,
     StaticTicks,
-    getStaticDuration,
   )
 import Data.MediaBus.Media.Channels (EachChannel (..))
 import Data.MediaBus.Media.Media (HasMedia (..))
 import Data.MediaBus.Media.Samples (EachSample (..))
-import Data.Proxy (Proxy (..))
 import Test.QuickCheck (Arbitrary)
 import Text.Printf (printf)
 
@@ -84,4 +82,3 @@ instance
   HasDuration (StaticSegment d x)
   where
   getDuration (MkStaticSegment x) = getDuration x
-

@@ -42,8 +42,8 @@ _yieldStream ::
   Monad m =>
   ALittleOutOfOrder ->
   ConduitT () (Stream () (SeqNum Word16) () () ()) m ()
-_yieldStream (MkALittleOutOfOrder frames) =
-  yieldMany frames
+_yieldStream (MkALittleOutOfOrder someFrames) =
+  yieldMany someFrames
     .| traceShowC 1 "ORIGINAL"
 
 _reorderSomeFrames =

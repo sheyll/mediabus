@@ -2,9 +2,19 @@
 
 ## 0.9.0
 
-* Rename `Segment` to `StaticSegment`
-* Add a new `Segment` that takes `NominalDiffTime` instead of static
-  time stamps
+* Improve the aggregation API
+  * Add `aggregateByC` for custom aggregation
+  * Introduce the `Frames` type for the result of the aggregation
+    functions in order to have a more readable show instance
+  * Introduce `aggregateUntilRestartOrEof` a functions the aggregates
+    all frames untile a start frame is received or no more input
+    is available
+
+* Simplify the segment API
+  * Rename `Segment` to `StaticSegment`
+  * Introduce a `Segment` that takes `NominalDiffTime` instead of static
+    time stamps
+  * Introduce `startEachSegmentC` a function that sends a `Start` value for each `Segment`
 
 ## 0.8.0
 
@@ -35,7 +45,7 @@
 * Add setTimestampFromDurations, setTimestampFromDurationsC
 * Merge Data.MediaBus.Conduit.Timing into Data.MediaBus.Conduit.SyncStream
 * Rename setSequenceNumbersAndTimestamps to setSequenceNumberAndTimestamp
-* Rename convertTicksC' to convertTimestampC'
+* Rename convertTicksC` to convertTimestampC`
 * Rename mapTicksC to mapTimestampC
 * Rename deriveFrameTimestamp to setTimestampFromDurationsC
 * Improve SyncStream documentation
@@ -50,7 +60,7 @@
 
 ## 0.3.2.0
 
-* Add utility module `Reframer` for _timestamp_ adaption of 'Frame's
+* Add utility module `Reframer` for _timestamp_ adaption of `Frame`s
 * Add utility module `VectorExtra`
 * Add logging utility modules to prefix all log messages done in nested
   `Conduit`s and `MonadLoggerIO` monads

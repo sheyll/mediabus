@@ -47,7 +47,7 @@ spec = do
           outputs =
             runConduitPure
               ( sourceList testInputs
-                  .| aggregateCountC @[] aggregationDuration
+                  .| aggregateCountC aggregationDuration
                   .| consume
               )
        in outputs
@@ -58,28 +58,34 @@ spec = do
                   ( MkFrame
                       ()
                       ()
-                      [ MkFrame 1000 200 PT1,
-                        MkFrame 1001 201 PT1,
-                        MkFrame 1002 202 PT1
-                      ]
+                      ( MkFrames
+                          [ MkFrame 1000 200 PT1,
+                            MkFrame 1001 201 PT1,
+                            MkFrame 1002 202 PT1
+                          ]
+                      )
                   ),
                 Next
                   ( MkFrame
                       ()
                       ()
-                      [ MkFrame 1003 666 PT1,
-                        MkFrame 1004 2341241 PT1,
-                        MkFrame 1005 205 PT1
-                      ]
+                      ( MkFrames
+                          [ MkFrame 1003 666 PT1,
+                            MkFrame 1004 2341241 PT1,
+                            MkFrame 1005 205 PT1
+                          ]
+                      )
                   ),
                 Next
                   ( MkFrame
                       ()
                       ()
-                      [ MkFrame 7777 206 PT1,
-                        MkFrame 7777 207 PT1,
-                        MkFrame 7_777 208 PT1
-                      ]
+                      ( MkFrames
+                          [ MkFrame 7777 206 PT1,
+                            MkFrame 7777 207 PT1,
+                            MkFrame 7_777 208 PT1
+                          ]
+                      )
                   )
               ]
     it "flushes the accumulated buffers when a start frame arives" $
@@ -104,7 +110,7 @@ spec = do
           outputs =
             runConduitPure
               ( sourceList testInputs
-                  .| aggregateCountC @[] aggregationDuration
+                  .| aggregateCountC aggregationDuration
                   .| consume
               )
        in outputs
@@ -115,30 +121,30 @@ spec = do
                   ( MkFrame
                       ()
                       ()
-                      [ MkFrame 1000 200 PT1,
+                      (MkFrames [ MkFrame 1000 200 PT1,
                         MkFrame 1001 201 PT1
-                      ]
+                      ])
                   ),
                 Start (MkFrameCtx 4516 () () (Just "start2")),
-                Next (MkFrame () () [MkFrame 1002 202 PT1]),
+                Next (MkFrame () () (MkFrames [MkFrame 1002 202 PT1])),
                 Start (MkFrameCtx 4516 () () (Just "start3")),
                 Start (MkFrameCtx 43516 () () (Just "start4")),
                 Next
                   ( MkFrame
                       ()
                       ()
-                      [ MkFrame 1003 666 PT1,
+                      (MkFrames [ MkFrame 1003 666 PT1,
                         MkFrame 1004 2341241 PT1,
                         MkFrame 1005 205 PT1
-                      ]
+                      ])
                   ),
                 Next
                   ( MkFrame
                       ()
                       ()
-                      [ MkFrame 7777 206 PT1,
+                      (MkFrames [ MkFrame 7777 206 PT1,
                         MkFrame 7777 207 PT1
-                      ]
+                      ])
                   )
               ]
     it "when aggregating n frames, it generates k output frames for (n * k) input frames" $
@@ -152,7 +158,7 @@ spec = do
                   outputs =
                     runConduitPure
                       ( sourceList inputs
-                          .| aggregateCountC @[] (fromIntegral n)
+                          .| aggregateCountC (fromIntegral n)
                           .| consume
                       )
                in length outputs === k
@@ -170,7 +176,7 @@ spec = do
                     outputs =
                       runConduitPure
                         ( sourceList inputs
-                            .| aggregateCountC @[] (fromIntegral n)
+                            .| aggregateCountC (fromIntegral n)
                             .| consume
                         )
                  in length outputs === k + 1
@@ -192,7 +198,7 @@ spec = do
                   outputs =
                     runConduitPure
                       ( sourceList inputs
-                          .| aggregateDurationC @[] aggregationDuration
+                          .| aggregateDurationC aggregationDuration
                           .| consume
                       )
                in length (toListOf (each . eachFramePayload) outputs) === k
@@ -203,7 +209,7 @@ spec = do
             outputs =
               runConduitPure
                 ( sourceList inputs
-                    .| aggregateDurationC @[] aggregateDurationSecs
+                    .| aggregateDurationC aggregateDurationSecs
                     .| consume
                 )
             aggregateDurationSecs = view nominalDiffTime aggregationDuration
@@ -234,15 +240,15 @@ spec = do
           outputs =
             runConduitPure
               ( sourceList (testInputs0 ++ testInputs1)
-                  .| aggregateDurationC @[] (aggregationDuration ^. nominalDiffTime)
+                  .| aggregateDurationC (aggregationDuration ^. nominalDiffTime)
                   .| consume
               )
        in outputs
             `shouldBe` fmap
               MkStream
               [ Start (MkFrameCtx () () () ()),
-                Next (MkFrame () () (takeFrames testInputs0)),
+                Next (MkFrame () () (MkFrames $ takeFrames testInputs0)),
                 Start (MkFrameCtx () () () ()),
-                Next (MkFrame () () (Prelude.take 3 (takeFrames testInputs1))),
-                Next (MkFrame () () (Prelude.drop 3 (takeFrames testInputs1)))
+                Next (MkFrame () () (MkFrames $ Prelude.take 3 (takeFrames testInputs1))),
+                Next (MkFrame () () (MkFrames $ Prelude.drop 3 (takeFrames testInputs1)))
               ]
