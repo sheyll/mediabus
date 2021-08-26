@@ -15,9 +15,9 @@ import Data.MediaBus.Basics.Ticks
     getStaticDuration,
     nominalDiffTime,
   )
-import Data.MediaBus.Media.Segment (Segment (MkSegment))
 import Data.Proxy (Proxy (..))
 import Data.Time.Clock (NominalDiffTime)
+import Data.MediaBus.Media.StaticSegment
 
 -- | Types that can have /blank/ values.
 class CanBeBlank a where
@@ -40,6 +40,7 @@ class CanGenerateBlankMedia a where
 
 instance
   (HasStaticDuration d, CanGenerateBlankMedia a) =>
-  CanBeBlank (Segment d a)
+  CanBeBlank (StaticSegment d a)
   where
-  blank = MkSegment (blankFor (getStaticDuration (Proxy :: Proxy d)))
+  blank = MkStaticSegment (blankFor (getStaticDuration (Proxy :: Proxy d)))
+

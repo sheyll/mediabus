@@ -11,7 +11,6 @@ where
 
 import Conduit (ConduitT, await)
 import Control.Lens
-import Data.MediaBus.Basics.Monotone (LocalOrd)
 import Data.MediaBus.Basics.Series (Series (Next, Start))
 import Data.MediaBus.Basics.Ticks
   ( HasDuration (..),
@@ -42,8 +41,7 @@ aggregateDurationC ::
   ( Monad m,
     HasDuration c,
     Applicative f,
-    Semigroup (f (Frame s t c)),
-    LocalOrd t
+    Semigroup (f (Frame s t c))
   ) =>
   -- | The minimum total duration of the list of payloads.
   NominalDiffTime ->

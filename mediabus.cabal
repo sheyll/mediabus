@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                mediabus
-version:             0.8.0
+version:             0.9.0
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/sheyll/mediabus
@@ -35,6 +35,7 @@ library
                      , Data.MediaBus.Conduit.Reorder
                      , Data.MediaBus.Conduit.FrameRing
                      , Data.MediaBus.Conduit.Segment
+                     , Data.MediaBus.Conduit.StaticSegment
                      , Data.MediaBus.Conduit.Stream
                      , Data.MediaBus.Conduit.SyncStream
                      , Data.MediaBus.Conduit.Trace
@@ -52,6 +53,7 @@ library
                      , Data.MediaBus.Media.Media
                      , Data.MediaBus.Media.Samples
                      , Data.MediaBus.Media.Segment
+                     , Data.MediaBus.Media.StaticSegment
                      , Data.MediaBus.Media.Stream
                      , Data.MediaBus.Media.SyncStream
                      , Data.MediaBus.Transport.Udp
@@ -137,6 +139,7 @@ test-suite tests
                      , Data.MediaBus.Conduit.ReorderSpec
                      , Data.MediaBus.Conduit.FrameRingSpec
                      , Data.MediaBus.Conduit.SegmentSpec
+                     , Data.MediaBus.Conduit.StaticSegmentSpec
                      , Data.MediaBus.Conduit.SpecUtils
                      , Data.MediaBus.Conduit.StreamSpec
                      , Data.MediaBus.Media.Audio.RawSpec

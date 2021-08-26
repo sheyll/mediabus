@@ -2,36 +2,28 @@
 -- TODO move or merge - after deciding howto proceed with the package structure in general
 module Data.MediaBus.Conduit.Segment
   ( segmentC,
-    segmentC',
     forgetSegmentationC,
   )
 where
 
-import Conduit (ConduitT, awaitForever, evalStateC)
+import Conduit (ConduitT, await, awaitForever, evalStateC)
 import Control.Lens
-  ( Field1 (_1),
-    Field2 (_2),
-    use,
-    (#),
-    (+=),
-    (-=),
+  ( makeLenses,
     (.=),
+    (<<+=),
     (<<.=),
+    (^.),
   )
 import Control.Monad (when)
-import Control.Parallel.Strategies (NFData)
 import Data.Default (Default)
 import Data.MediaBus.Basics.Series (Series (Next, Start))
 import Data.MediaBus.Basics.Ticks
   ( CanBeTicks,
     HasDuration (..),
-    HasStaticDuration,
     Ticks,
-    getStaticDuration,
-    nominalDiffTime,
   )
 import Data.MediaBus.Conduit.Stream
-  ( mapFrameContentC',
+  ( mapFrameContentC,
     yieldNextFrame,
     yieldStartFrameCtx,
   )
@@ -39,79 +31,93 @@ import Data.MediaBus.Media.Segment (CanSegment (..), Segment (..))
 import Data.MediaBus.Media.Stream
   ( Frame (MkFrame),
     Stream (MkStream),
+    frameCtxSeqNumRef,
+    frameCtxTimestampRef,
+    frameSeqNum,
+    frameTimestamp,
   )
-import Data.Proxy (Proxy (Proxy))
+import Data.Time (NominalDiffTime)
+
+data SegmenterState s t c = SegSt
+  { _nextSeq :: s,
+    _timeOffset :: t,
+    _segRest :: Maybe c
+  }
+
+mkSegmenterState :: s -> t -> SegmenterState s t c
+mkSegmenterState s t = SegSt s t Nothing
+
+makeLenses ''SegmenterState
 
 -- | The packetizer recombines incoming packets into 'Segment's of the given
--- size. The sequence numbers will be offsetted by the number extra frames
--- generated.
+-- size. Sequence numbers start with the sequence number of the first frame
+-- or the last start frame, the same holds for timestamps.
 segmentC ::
+  forall i s r t p c m.
   ( Num s,
     Monad m,
     CanSegment c,
     Monoid c,
     Default i,
-    CanBeTicks r t,
     HasDuration c,
-    HasStaticDuration d
+    CanBeTicks r t
   ) =>
+  NominalDiffTime ->
   ConduitT
     (Stream i s (Ticks r t) p c)
-    (Stream i s (Ticks r t) p (Segment d c))
+    (Stream i s (Ticks r t) p (Segment c))
     m
     ()
-segmentC = segmentC' Proxy
-
-segmentC' ::
-  ( Num s,
-    Monad m,
-    CanSegment c,
-    Monoid c,
-    Default i,
-    CanBeTicks r t,
-    HasDuration c,
-    HasStaticDuration d
-  ) =>
-  proxy d ->
-  ConduitT
-    (Stream i s (Ticks r t) p c)
-    (Stream i s (Ticks r t) p (Segment d c))
-    m
-    ()
-segmentC' dpx =
+segmentC segmentDuration =
   when (segmentDuration > 0) $
-    evalStateC (0, Nothing) $ awaitForever go
+    await >>= \case
+      Nothing -> return ()
+      Just x -> do
+        let (seq0, ts0) =
+              case x of
+                MkStream (Start xStart) ->
+                  ( xStart ^. frameCtxSeqNumRef,
+                    xStart ^. frameCtxTimestampRef
+                  )
+                MkStream (Next xNext) ->
+                  ( xNext ^. frameSeqNum,
+                    xNext ^. frameTimestamp
+                  )
+        evalStateC (mkSegmenterState seq0 ts0) $ do
+          go x
+          awaitForever go
+          yieldRest
   where
-    segmentDurationInTicks = nominalDiffTime # segmentDuration
-    segmentDuration = getStaticDuration dpx
-    go (MkStream (Next (MkFrame !t !s !cIn))) = do
-      !cRest <- _2 <<.= Nothing
-      let tsOffset = negate (getDurationTicks cRest)
-      !cRest' <- yieldLoop (maybe cIn (<> cIn) cRest) tsOffset
-      _2 .= cRest'
-      where
-        yieldLoop !c !timeOffset =
-          if getDuration c == segmentDuration
-            then do
-              yieldWithAdaptedSeqNumAndTimestamp (MkSegment c)
-              return Nothing
-            else case splitAfterDuration dpx c of
-              Just (!packet, !rest) -> do
-                yieldWithAdaptedSeqNumAndTimestamp packet
-                _1 += 1
-                yieldLoop rest (timeOffset + segmentDurationInTicks)
-              Nothing -> do
-                -- we just swallowed an incoming packet, therefore we need
-                -- to decrease the seqnums
-                _1 -= 1
-                return (Just c)
-          where
-            yieldWithAdaptedSeqNumAndTimestamp !p = do
-              !seqNumOffset <- use _1
-              yieldNextFrame (MkFrame (t + timeOffset) (s + seqNumOffset) p)
-    go (MkStream (Start !frmCtx)) = yieldStartFrameCtx frmCtx
+    go (MkStream (Next (MkFrame _ _ !cIn))) =
+      yieldLoop cIn
+    go (MkStream (Start !frmCtx)) = do
+      yieldRest
+      let (seq0, ts0) =
+            ( frmCtx ^. frameCtxSeqNumRef,
+              frmCtx ^. frameCtxTimestampRef
+            )
+      nextSeq .= seq0
+      timeOffset .= ts0
+      yieldStartFrameCtx frmCtx
+    yieldLoop !cIn = do
+      !cRest <- segRest <<.= Nothing
+      let !c = maybe cIn (<> cIn) cRest
+      if getDuration c == segmentDuration
+        then yieldWithAdaptedSeqNumAndTimestamp c
+        else case splitAfterDuration segmentDuration c of
+          Just (!packet, !rest) -> do
+            yieldWithAdaptedSeqNumAndTimestamp packet
+            yieldLoop rest
+          Nothing ->
+            segRest .= Just c
+    yieldWithAdaptedSeqNumAndTimestamp !p = do
+      !s <- nextSeq <<+= 1
+      !t <- timeOffset <<+= getDurationTicks p
+      yieldNextFrame (MkFrame t s (MkSegment p))
+    yieldRest = do
+      !cRest <- segRest <<.= Nothing
+      mapM_ yieldWithAdaptedSeqNumAndTimestamp cRest
 
-forgetSegmentationC ::
-  (NFData c, Monad m) =>
-  ConduitT (Stream i s t p (Segment d c)) (Stream i s t p c) m ()
-forgetSegmentationC = mapFrameContentC' _segmentContent
+-- | Simply drop the 'Segment' wrap around the 'Frame' content.
+forgetSegmentationC :: (Monad m) => ConduitT (Stream i s t p (Segment c)) (Stream i s t p c) m ()
+forgetSegmentationC = mapFrameContentC _segmentContent

@@ -8,42 +8,76 @@ import Data.Proxy
 import qualified Data.Vector.Storable as V
 import Data.Word
 import Test.QuickCheck
+import Data.Time (NominalDiffTime)
 
-runSegmetCOnTestData ::
+runStaticSegmetCOnTestData ::
   (KnownRate r, HasStaticDuration d) =>
   [TestLen] ->
   PT d ->
   ( [Stream () Word8 (Ticks r Word32) () (Audio r Mono (Raw S16))] ->
-    [Stream () Word8 (Ticks r Word32) () (Segment d (Audio r Mono (Raw S16)))] ->
+    [Stream () Word8 (Ticks r Word32) () (StaticSegment d (Audio r Mono (Raw S16)))] ->
+    res
+  ) ->
+  res
+runStaticSegmetCOnTestData ls pt f =
+  let inputs = mkTestInputs ls
+      outputs = runStaticSegmetC inputs pt
+   in f inputs outputs
+
+runSegmetCOnTestData ::
+  (KnownRate r) =>
+  [TestLen] ->
+  NominalDiffTime ->
+  ( [Stream () Word8 (Ticks r Word32) () (Audio r Mono (Raw S16))] ->
+    [Stream () Word8 (Ticks r Word32) () (Segment (Audio r Mono (Raw S16)))] ->
     res
   ) ->
   res
 runSegmetCOnTestData ls pt f =
   let inputs = mkTestInputs ls
-      outputs = runSegmentC inputs pt
+      outputs = runSegmetC inputs pt
    in f inputs outputs
 
+seqNumStrictlyMonotoneIncreasing :: (HasSeqNum t, Eq (GetSeqNum t), Num (GetSeqNum t)) => [t] -> Bool
 seqNumStrictlyMonotoneIncreasing outs =
   let res = view seqNum <$> outs
    in all (== 1) $ zipWith (-) (Prelude.drop 2 res) (Prelude.drop 1 res)
 
+ticksStrictlyMonotoneIncreasing ::
+  (HasTimestamp s, Eq (GetTimestamp s), Num (GetTimestamp s)) =>
+  GetTimestamp s ->
+  [s] ->
+  Bool
 ticksStrictlyMonotoneIncreasing dur outs =
   let res = view timestamp' <$> outs
    in all (== dur) $ zipWith (-) (Prelude.drop 2 res) (Prelude.drop 1 res)
 
-runSegmentC ::
+runStaticSegmetC ::
   (HasStaticDuration d, HasDuration c, CanSegment c, Monoid c, KnownRate r) =>
   [Stream () Word8 (Ticks r Word32) () c] ->
   PT d ->
-  [Stream () Word8 (Ticks r Word32) () (Segment d c)]
-runSegmentC inputs _p =
+  [Stream () Word8 (Ticks r Word32) () (StaticSegment d c)]
+runStaticSegmetC inputs _p =
   runConduitPure
     ( sourceList inputs
-        .| segmentC
+        .| staticSegmentC
         .| consume
     )
 
-mkTestInputs ::  KnownRate r =>
+runSegmetC ::
+  ( HasDuration c, CanSegment c, Monoid c, KnownRate r) =>
+  [Stream () Word8 (Ticks r Word32) () c] ->
+  NominalDiffTime ->
+  [Stream () Word8 (Ticks r Word32) () (Segment c)]
+runSegmetC inputs p =
+  runConduitPure
+    ( sourceList inputs
+        .| segmentC p
+        .| consume
+    )
+
+mkTestInputs ::
+  KnownRate r =>
   [TestLen] ->
   [Stream () Word8 (Ticks r Word32) () (Audio r Mono (Raw S16))]
 mkTestInputs =
@@ -63,7 +97,7 @@ mkTestInputs =
             ( MkFrame
                 ts
                 sn
-                (pcmMediaBuffer . mediaBufferVector # V.replicate len 0)
+                (pcmMediaBuffer . mediaBufferVector # V.replicate len 0xD5)
             )
         )
     mkTestStartPacket = MkStream (Start (MkFrameCtx () 0 0 ()))

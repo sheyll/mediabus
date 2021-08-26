@@ -22,6 +22,7 @@ import Data.MediaBus.Conduit.Discontinous as X
 import Data.MediaBus.Conduit.FrameRing as X
 import Data.MediaBus.Conduit.Reorder as X
 import Data.MediaBus.Conduit.Segment as X
+import Data.MediaBus.Conduit.StaticSegment as X
 import Data.MediaBus.Conduit.Stream as X
 import Data.MediaBus.Conduit.SyncStream as X
 import Data.MediaBus.Conduit.Trace as X
@@ -39,6 +40,7 @@ import Data.MediaBus.Media.Discontinous as X
 import Data.MediaBus.Media.Media as X
 import Data.MediaBus.Media.Samples as X
 import Data.MediaBus.Media.Segment as X
+import Data.MediaBus.Media.StaticSegment as X
 import Data.MediaBus.Media.Stream as X
 import Data.MediaBus.Media.SyncStream as X
 import Data.MediaBus.Transport.Udp as X

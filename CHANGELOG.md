@@ -1,5 +1,11 @@
 # Changes
 
+## 0.9.0
+
+* Rename `Segment` to `StaticSegment`
+* Add a new `Segment` that takes `NominalDiffTime` instead of static
+  time stamps
+
 ## 0.8.0
 
 * Add a `HasDuration` implementation for lists

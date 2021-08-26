@@ -424,10 +424,7 @@ setTimestampFromDurations !sb !t =
   (sb & timestamp .~ t, t + (nominalDiffTime # getDuration sb))
 
 -- | Explicitly remove a timestamp, by setting the timestamp to @()@.
-removeTimestamp ::
-  (HasTimestamp a) =>
-  a ->
-  (SetTimestamp a ())
+removeTimestamp :: (HasTimestamp a) => a -> SetTimestamp a ()
 removeTimestamp = timestamp .~ ()
 
 -- ** Known at compile time durations

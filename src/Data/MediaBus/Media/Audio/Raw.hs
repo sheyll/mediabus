@@ -16,7 +16,6 @@ import Data.MediaBus.Basics.Ticks
     KnownRate (rateVal),
     RateProxy (MkRateProxy),
     getPeriodDuration,
-    getStaticDuration,
   )
 import Data.MediaBus.Media.Audio (Audio)
 import Data.MediaBus.Media.Blank
@@ -40,7 +39,6 @@ import Data.MediaBus.Media.Media (IsMedia, MediaDescription (..))
 import Data.MediaBus.Media.Samples (EachSample (..), EachSampleL)
 import Data.MediaBus.Media.Segment
   ( CanSegment (..),
-    segmentContent,
   )
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import qualified Data.Vector.Storable as V
@@ -166,16 +164,15 @@ instance
   (CanBeSample (Pcm c t), KnownRate r) =>
   CanSegment (Audio r c (Raw t))
   where
-  splitAfterDuration proxy buf@(MkPcm (MkMediaBuffer !bufV))
+  splitAfterDuration tPacket buf@(MkPcm (MkMediaBuffer !bufV))
     | getDuration buf >= tPacket =
       let (!nextPacket, !rest) = V.splitAt n bufV
        in Just
-            ( segmentContent . pcmMediaBuffer . mediaBufferVector # V.force nextPacket,
+            ( pcmMediaBuffer . mediaBufferVector # V.force nextPacket,
               pcmMediaBuffer . mediaBufferVector # rest
             )
     | otherwise = Nothing
     where
-      !tPacket = getStaticDuration proxy
       !n = ceiling (tPacket / tSample)
       !tSample = getPeriodDuration (Proxy :: Proxy (Audio r c (Raw t)))
 

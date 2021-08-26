@@ -15,73 +15,64 @@ import Data.MediaBus.Basics.Ticks
   ( CoerceRate (..),
     HasDuration (getDuration),
     HasRate (..),
-    HasStaticDuration (..),
     KnownRate,
-    KnownStaticTicks,
-    StaticTicks,
-    getStaticDuration,
   )
 import Data.MediaBus.Media.Channels (EachChannel (..))
 import Data.MediaBus.Media.Media (HasMedia (..))
 import Data.MediaBus.Media.Samples (EachSample (..))
-import Data.Proxy (Proxy (..))
+import Data.Time (NominalDiffTime)
 import Test.QuickCheck (Arbitrary)
 import Text.Printf (printf)
 
--- | A segment is some content with a fixed (type level) duration.
-newtype Segment (duration :: StaticTicks) c = MkSegment {_segmentContent :: c}
+-- | A segment is some content with a fixed (maximum) duration.
+-- The content is shorter at the end of a stream or when a 'Start'
+-- 'FrameCtx' was sent.
+newtype Segment c = MkSegment {_segmentContent :: c}
   deriving (NFData, Default, Arbitrary, Functor, Eq)
 
 -- | An 'Iso' for the 'Segment' newtype.
-segmentContent :: Iso (Segment d c) (Segment d c') c c'
+segmentContent :: Iso (Segment c) (Segment c') c c'
 segmentContent = iso _segmentContent MkSegment
 
-instance (HasMedia c c') => HasMedia (Segment d c) (Segment d c') where
-  type MediaFrom (Segment d c) = MediaFrom c
-  type MediaTo (Segment d c') = MediaTo c'
+instance (HasMedia c c') => HasMedia (Segment c) (Segment c') where
+  type MediaFrom (Segment c) = MediaFrom c
+  type MediaTo (Segment c') = MediaTo c'
   media = segmentContent . media
 
-instance (EachSample c c') => EachSample (Segment d c) (Segment d c') where
-  type SamplesFrom (Segment d c) = SamplesFrom c
-  type SamplesTo (Segment d c') = SamplesTo c'
+instance (EachSample c c') => EachSample (Segment c) (Segment c') where
+  type SamplesFrom (Segment c) = SamplesFrom c
+  type SamplesTo (Segment c') = SamplesTo c'
   eachSample = segmentContent . eachSample
 
-instance (EachChannel c c') => EachChannel (Segment d c) (Segment d c') where
-  type ChannelsFrom (Segment d c) = ChannelsFrom c
-  type ChannelsTo (Segment d c') = ChannelsTo c'
+instance (EachChannel c c') => EachChannel (Segment c) (Segment c') where
+  type ChannelsFrom (Segment c) = ChannelsFrom c
+  type ChannelsTo (Segment c') = ChannelsTo c'
   eachChannel = segmentContent . eachChannel
 
-instance (HasRate c) => HasRate (Segment d c) where
-  type GetRate (Segment d c) = GetRate c
-  type SetRate (Segment d c) r' = Segment d (SetRate c r')
+instance (HasRate c) => HasRate (Segment c) where
+  type GetRate (Segment c) = GetRate c
+  type SetRate (Segment c) r' = Segment (SetRate c r')
 
 instance
   (HasRate i, GetRate i ~ ri, SetRate i rj ~ j, KnownRate rj, CoerceRate i j ri rj) =>
-  CoerceRate (Segment d i) (Segment d j) ri rj
+  CoerceRate (Segment i) (Segment j) ri rj
   where
   coerceRate px (MkSegment !c) = MkSegment (coerceRate px c)
 
 instance
-  (HasStaticDuration d, Show c) =>
-  Show (Segment d c)
+  (HasDuration c, Show c) =>
+  Show (Segment c)
   where
   showsPrec _d (MkSegment c) =
     showString "[| "
       . shows c
-      . showString (printf " |%10s]" (show (getStaticDuration (Proxy :: Proxy d))))
+      . showString (printf " |%10s]" (show (getDuration c)))
 
 instance
-  KnownStaticTicks d =>
-  HasStaticDuration (Segment d x)
+  HasDuration x =>
+  HasDuration (Segment x)
   where
-  type SetStaticDuration (Segment d x) pt = Segment pt x
-  type GetStaticDuration (Segment d x) = d
-
-instance
-  HasStaticDuration d =>
-  HasDuration (Segment d x)
-  where
-  getDuration _ = getStaticDuration (Proxy :: Proxy d)
+  getDuration (MkSegment x) = getDuration x
 
 -- | Class of types that support splitting values into parts with a certain
 --   duration.
@@ -89,8 +80,4 @@ class CanSegment a where
   -- | Try to split the packet into the a part which has the given
   -- duration and a rest. If it is not possible to split of the desired duration,
   --  e.g. because the input data is too short, return `Nothing`.
-  splitAfterDuration ::
-    (HasStaticDuration d) =>
-    proxy d ->
-    a ->
-    Maybe (Segment d a, a)
+  splitAfterDuration :: NominalDiffTime -> a -> Maybe (a, a)

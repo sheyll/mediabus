@@ -15,6 +15,7 @@ module Data.MediaBus.Conduit.Stream
     mapTimestampC',
     mapFrameContentMC,
     mapFrameContentMC',
+    mapFrameContentC,
     mapFrameContentC',
     foldStream,
     foldStreamM,
@@ -156,6 +157,13 @@ mapTimestampC' ::
 mapTimestampC' = mapC . withStrategy rdeepseq . over timestamp
 
 -- | A conduit that applies the given pure function to 'eachFramePayload' of a 'Stream'.
+mapFrameContentC ::
+  (Monad m) =>
+  (c -> c') ->
+  ConduitT (Stream i s t p c) (Stream i s t p c') m ()
+mapFrameContentC !f = mapC (over eachFramePayload f)
+
+-- | A conduit that applies the given pure function to 'eachFramePayload' of a 'Stream' (strict).
 mapFrameContentC' ::
   (NFData c', Monad m) =>
   (c -> c') ->
