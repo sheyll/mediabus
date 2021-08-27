@@ -13,9 +13,10 @@ module Data.MediaBus.Conduit.Aggregate
   )
 where
 
-import Conduit (ConduitT, await)
+import Conduit (ConduitT, awaitForever, evalStateC)
 import Control.DeepSeq
 import Control.Lens
+import Control.Monad.State (MonadState (get, put))
 import Data.Foldable (traverse_)
 import Data.MediaBus.Basics.Series (Series (Next, Start))
 import Data.MediaBus.Basics.Ticks
@@ -121,34 +122,40 @@ aggregateByC f = go . arInitial
           aggregationUnfinished = mempty
         }
 
-    go !ar = await >>= maybe handleEOF handlePayload
+    go = flip evalStateC $ do
+      awaitForever handlePayload
+      handleEOF
       where
-        handleEOF =
-          let (!mOut, _) = f Nothing ar
-           in mapM_ yieldResult mOut
+        handleEOF = do
+          !ar <- get
+          let (!mOut, !ar') = f Nothing ar
+          put ar'
+          mapM_ yieldResult mOut
 
         handlePayload = \case
           MkStream (Start !pl) -> handleStart pl
           MkStream (Next !pl) -> handleNext pl
 
         handleStart !pl = do
+          !ar <- get
           let (!mRes, !ar') = f Nothing ar
+          put ar'
           traverse_ yieldResult mRes
           yieldStartFrameCtx
             ( pl & frameCtxSeqNumRef .~ ()
                 & frameCtxTimestampRef .~ ()
             )
-          go ar'
 
         handleNext !pl = do
+          !ar <- get
           let (!mRes, !ar') = f (Just pl) ar
+          put ar'
           traverse_ yieldResult mRes
-          go ar'
 
     yieldResult !x = yieldNextFrame (MkFrame () () x)
 
 -- | Group content frames into 'Frames' such that the total duration
--- of the contents is just @>= t@.
+-- of the contents is @t@ (on average).
 --
 -- If you want a specific number of contents, and the contents have no 'HasDuration'
 -- instance, use 'aggregateCountC'.
@@ -180,11 +187,22 @@ aggregateDurationC t = aggregateByC f (0 :: NominalDiffTime)
       )
     f (Just pl) ar =
       let !accDur = aggregationState ar + getDuration pl
-          !single = MkFrames [pl]
-          !acc = aggregationUnfinished ar <> single
+          !acc = aggregationUnfinished ar <> MkFrames [pl]
        in if accDur < t
-            then (Nothing, MkAggregationResult {aggregationState = accDur, aggregationUnfinished = acc})
-            else (Just acc, MkAggregationResult {aggregationState = 0, aggregationUnfinished = mempty})
+            then
+              ( Nothing,
+                MkAggregationResult
+                  { aggregationState = accDur,
+                    aggregationUnfinished = acc
+                  }
+              )
+            else
+              ( Just acc,
+                MkAggregationResult
+                  { aggregationState = accDur - t,
+                    aggregationUnfinished = mempty
+                  }
+              )
 
 -- | Group a specific number of content frames into a list of frames.
 --
@@ -217,8 +235,7 @@ aggregateCountC maxCount = aggregateByC f 0
       )
     f (Just pl) ar =
       let !count = aggregationState ar + 1
-          !single = MkFrames [pl]
-          !acc = aggregationUnfinished ar <> single
+          !acc = aggregationUnfinished ar <> MkFrames [pl]
        in if count < maxCount
             then (Nothing, MkAggregationResult {aggregationState = count, aggregationUnfinished = acc})
             else (Just acc, MkAggregationResult {aggregationState = 0, aggregationUnfinished = mempty})

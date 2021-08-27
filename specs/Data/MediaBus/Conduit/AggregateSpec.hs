@@ -121,9 +121,11 @@ spec = do
                   ( MkFrame
                       ()
                       ()
-                      (MkFrames [ MkFrame 1000 200 PT1,
-                        MkFrame 1001 201 PT1
-                      ])
+                      ( MkFrames
+                          [ MkFrame 1000 200 PT1,
+                            MkFrame 1001 201 PT1
+                          ]
+                      )
                   ),
                 Start (MkFrameCtx 4516 () () (Just "start2")),
                 Next (MkFrame () () (MkFrames [MkFrame 1002 202 PT1])),
@@ -133,18 +135,22 @@ spec = do
                   ( MkFrame
                       ()
                       ()
-                      (MkFrames [ MkFrame 1003 666 PT1,
-                        MkFrame 1004 2341241 PT1,
-                        MkFrame 1005 205 PT1
-                      ])
+                      ( MkFrames
+                          [ MkFrame 1003 666 PT1,
+                            MkFrame 1004 2341241 PT1,
+                            MkFrame 1005 205 PT1
+                          ]
+                      )
                   ),
                 Next
                   ( MkFrame
                       ()
                       ()
-                      (MkFrames [ MkFrame 7777 206 PT1,
-                        MkFrame 7777 207 PT1
-                      ])
+                      ( MkFrames
+                          [ MkFrame 7777 206 PT1,
+                            MkFrame 7777 207 PT1
+                          ]
+                      )
                   )
               ]
     it "when aggregating n frames, it generates k output frames for (n * k) input frames" $
@@ -202,6 +208,25 @@ spec = do
                           .| consume
                       )
                in length (toListOf (each . eachFramePayload) outputs) === k
+    it "the output durations average the input durations" $
+      let testInputs :: [Stream () () () () (Ticks32 (Hz 1))]
+          threeSecondsFrame = MkFrame () () (MkTicks 3)
+          threeSecondsMedia = MkStream (Next threeSecondsFrame)
+          testInputs = Prelude.replicate 10 threeSecondsMedia
+          aggregationDuration = 10
+          outputs =
+            runConduitPure
+              ( sourceList testInputs
+                  .| aggregateDurationC aggregationDuration
+                  .| consume
+              )
+       in outputs
+            `shouldBe` fmap
+              MkStream
+              [ Next (MkFrame () () (MkFrames [threeSecondsFrame, threeSecondsFrame, threeSecondsFrame, threeSecondsFrame])), -- 12
+                Next (MkFrame () () (MkFrames [threeSecondsFrame, threeSecondsFrame, threeSecondsFrame])), --21
+                Next (MkFrame () () (MkFrames [threeSecondsFrame, threeSecondsFrame, threeSecondsFrame]))  --30
+              ]
 
     it "groups frames into the given duration, as good as possible" $
       property $ \(aggregationDuration :: Ticks32At16000) inputLengths ->
@@ -225,11 +250,11 @@ spec = do
                 else
                   classify
                     (totalInputDuration < aggregateDurationSecs)
-                    "less input that aggregation duration"
+                    "less input than aggregation duration"
                     (totalInputDuration === totalOutputDuration)
                     .&&. classify
                       (totalInputDuration >= aggregateDurationSecs)
-                      "more input that aggregation duration"
+                      "more input than aggregation duration"
                       (totalInputDuration === totalOutputDuration)
     it "flushes the accumulated buffers when a start frame arives" $
       let testInputs0 =
@@ -247,8 +272,8 @@ spec = do
             `shouldBe` fmap
               MkStream
               [ Start (MkFrameCtx () () () ()),
-                Next (MkFrame () () (MkFrames $ takeFrames testInputs0)),
+                Next (MkFrame () () (MkFrames $ takePayloadFrames testInputs0)),
                 Start (MkFrameCtx () () () ()),
-                Next (MkFrame () () (MkFrames $ Prelude.take 3 (takeFrames testInputs1))),
-                Next (MkFrame () () (MkFrames $ Prelude.drop 3 (takeFrames testInputs1)))
+                Next (MkFrame () () (MkFrames $ Prelude.take 3 (takePayloadFrames testInputs1))),
+                Next (MkFrame () () (MkFrames $ Prelude.drop 3 (takePayloadFrames testInputs1)))
               ]

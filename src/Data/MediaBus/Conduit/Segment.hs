@@ -34,7 +34,7 @@ import Data.MediaBus.Media.Stream
     frameCtxSeqNumRef,
     frameCtxTimestampRef,
     frameSeqNum,
-    frameTimestamp,
+    frameTimestamp
   )
 import Data.Time (NominalDiffTime)
 
@@ -121,3 +121,7 @@ segmentC segmentDuration =
 -- | Simply drop the 'Segment' wrap around the 'Frame' content.
 forgetSegmentationC :: (Monad m) => ConduitT (Stream i s t p (Segment c)) (Stream i s t p c) m ()
 forgetSegmentationC = mapFrameContentC _segmentContent
+
+-- | Yield each 'Segment' like 'forgetSegmentationC' followed by a 'Start' value if the segment is
+-- not the last segment.
+--

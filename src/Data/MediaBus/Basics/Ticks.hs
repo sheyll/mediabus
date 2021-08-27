@@ -377,6 +377,9 @@ class HasDuration a where
     Ticks r i
   getDurationTicks !x = nominalDiffTime # getDuration x
 
+instance (CanBeTicks r i) => HasDuration (Ticks r i) where
+  getDuration = view nominalDiffTime
+
 instance HasDuration a => HasDuration [a] where
   getDurationTicks = sum . map getDurationTicks
   getDuration = sum . map getDuration
