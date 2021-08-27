@@ -21,6 +21,9 @@ module Data.MediaBus.Conduit.Stream
     foldStreamM,
     concatStreamContents,
     logStreamC,
+    logWarnStreamC,
+    logInfoStreamC,
+    logDebugStreamC,
   )
 where
 
@@ -33,7 +36,6 @@ import Conduit
     mapC,
     mapInput,
     mapMC,
-    mapM_C,
     mapOutput,
     yield,
   )
@@ -60,6 +62,7 @@ import Data.MediaBus.Media.Stream
     stream,
   )
 import Data.String
+import Data.Text (Text)
 
 -- * Yielding 'Stream' content
 
@@ -221,6 +224,35 @@ concatStreamContents =
 logStreamC ::
   (Show (Stream i s t p c), Monad m, MonadLogger m) =>
   (Stream i s t p c -> Maybe LogLevel) ->
+  Text ->
   ConduitT (Stream i s t p c) (Stream i s t p c) m ()
-logStreamC f =
-  mapM_C (\x -> mapM_ (`logOtherN` fromString (show x)) (f x))
+logStreamC f title =
+  mapMC
+    ( \x -> do
+        mapM_ (`logOtherN` (title <> fromString (show x))) (f x)
+        return x
+    )
+
+-- | Log a stream using 'LevelWarn'.
+logWarnStreamC ::
+  (Show (Stream i s t p c), Monad m, MonadLogger m) =>
+  Text ->
+  ConduitT (Stream i s t p c) (Stream i s t p c) m ()
+logWarnStreamC =
+  logStreamC (const (Just LevelWarn))
+
+-- | Log a stream using 'LevelInfo'.
+logInfoStreamC ::
+  (Show (Stream i s t p c), Monad m, MonadLogger m) =>
+  Text ->
+  ConduitT (Stream i s t p c) (Stream i s t p c) m ()
+logInfoStreamC =
+  logStreamC (const (Just LevelInfo))
+
+-- | Log a stream using 'LevelDebug'.
+logDebugStreamC ::
+  (Show (Stream i s t p c), Monad m, MonadLogger m) =>
+  Text ->
+  ConduitT (Stream i s t p c) (Stream i s t p c) m ()
+logDebugStreamC =
+  logStreamC (const (Just LevelDebug))

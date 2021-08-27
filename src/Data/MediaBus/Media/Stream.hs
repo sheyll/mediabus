@@ -19,7 +19,9 @@ module Data.MediaBus.Media.Stream
     type Streamish,
     stream,
     takeStartFrames,
-    takeFrames,
+    takePayloadFrames,
+    isPayloadFrame,
+    isStartFrame
   )
 where
 
@@ -38,7 +40,7 @@ import Data.Default (Default (..))
 import Data.MediaBus.Basics.Sequence (HasSeqNum (..))
 import Data.MediaBus.Basics.Series
   ( AsSeries (seriesNext', seriesStart'),
-    Series (Next),
+    Series (Start, Next),
     _Next,
     _Start,
   )
@@ -316,8 +318,20 @@ instance AsSeries (Stream i s t p c) (FrameCtx i s t p) (Frame s t c) where
   seriesStart' = stream . seriesStart'
   seriesNext' = stream . seriesNext'
 
-takeFrames :: [Stream i s t p c] -> [Frame s t c]
-takeFrames = toListOf (each . seriesNext')
+-- | Extract /payload/ frames from a list of 'Stream' values.
+takePayloadFrames :: [Stream i s t p c] -> [Frame s t c]
+takePayloadFrames = toListOf (each . seriesNext')
 
+-- | Extract /start/ frames from a list of 'Stream' values.
 takeStartFrames :: [Stream i s t p c] -> [FrameCtx i s t p]
 takeStartFrames = toListOf (each . seriesStart')
+
+-- | Return 'True' if the 'Stream' value is a /payload/ frame.
+isPayloadFrame :: Stream i s t p c -> Bool
+isPayloadFrame (MkStream (Next _)) = True
+isPayloadFrame _ = False
+
+-- | Return 'True' if the 'Stream' value is a /start/ frame.
+isStartFrame :: Stream i s t p c -> Bool
+isStartFrame (MkStream (Start _)) = True
+isStartFrame _ = False

@@ -180,6 +180,8 @@ test-suite tests
                      , type-spec
                      , unliftio ^>= 0.2
                      , vector < 13
+                     , resourcet
+                     , monad-logger
 
   default-extensions:  ApplicativeDo
                      , Arrows
