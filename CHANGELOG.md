@@ -1,5 +1,9 @@
 # Changes
 
+## 0.9.1
+
+* Add `forall` expressions for easier type applications
+
 ## 0.9.0
 
 * Introduce `logStreamC` a `Stream` logger conduit.

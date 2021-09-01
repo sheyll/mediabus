@@ -46,7 +46,7 @@ import Data.Proxy (Proxy (Proxy))
 -- | The packetizer recombines incoming packets into 'Segment's of the given
 -- size. The sequence numbers will be offsetted by the number extra frames
 -- generated.
-staticSegmentC ::
+staticSegmentC :: forall d i s r t p c m.
   ( Num s,
     Monad m,
     CanSegment c,
