@@ -17,6 +17,7 @@ import Conduit (ConduitT, awaitForever, evalStateC)
 import Control.DeepSeq
 import Control.Lens
 import Control.Monad.State (MonadState (get, put))
+import Data.Default
 import Data.Foldable (traverse_)
 import Data.MediaBus.Basics.Series (Series (Next, Start))
 import Data.MediaBus.Basics.Ticks
@@ -26,6 +27,7 @@ import Data.MediaBus.Conduit.Stream
   ( yieldNextFrame,
     yieldStartFrameCtx,
   )
+import Data.MediaBus.Media.Buffer
 import Data.MediaBus.Media.Channels
 import Data.MediaBus.Media.Media
 import Data.MediaBus.Media.Stream
@@ -38,6 +40,23 @@ newtype Frames sequenceNumber timestamp payload = MkFrames {_frames :: [Frame se
   deriving (Eq, Ord, NFData, Functor, Monoid, Semigroup)
 
 makeLenses ''Frames
+
+instance (Default s, Default t, Default c) => Default (Frames s t c) where
+  def = MkFrames [def]
+
+instance
+  (HasMediaBufferLens' c, Default (Frame s t c)) =>
+  HasMediaBufferLens (Frames s t c) (Frames s t c)
+  where
+  type MediaBufferElemFrom (Frames s t c) = MediaBufferElemFrom c
+  type MediaBufferElemTo (Frames s t c) = MediaBufferElemTo c
+  mediaBufferLens =
+    lens xfrom xto
+    where
+      xfrom = foldOf (frames . folded . mediaBufferLens)
+      xto :: Frames s t c -> MediaBuffer (MediaBufferElemTo c) -> Frames s t c
+      xto (MkFrames []) mbuf = MkFrames [def & mediaBufferLens' .~ mbuf]
+      xto (MkFrames (firstFrame : _)) mbuf = MkFrames [firstFrame & mediaBufferLens' .~ mbuf]
 
 instance
   (Show s, Show t, HasDuration p) =>

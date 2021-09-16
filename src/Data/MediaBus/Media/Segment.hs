@@ -23,6 +23,7 @@ import Data.MediaBus.Media.Samples (EachSample (..))
 import Data.Time (NominalDiffTime)
 import Test.QuickCheck (Arbitrary)
 import Text.Printf (printf)
+import Data.MediaBus.Media.Buffer
 
 -- | A segment is some content with a fixed (maximum) duration.
 -- The content is shorter at the end of a stream or when a 'Start'
@@ -38,6 +39,15 @@ instance (HasMedia c c') => HasMedia (Segment c) (Segment c') where
   type MediaFrom (Segment c) = MediaFrom c
   type MediaTo (Segment c') = MediaTo c'
   media = segmentContent . media
+
+
+instance
+  HasMediaBufferLens c c' =>
+  HasMediaBufferLens (Segment c) (Segment c')
+  where
+   type MediaBufferElemFrom (Segment c) = MediaBufferElemFrom c
+   type MediaBufferElemTo (Segment c') = MediaBufferElemTo c'
+   mediaBufferLens = segmentContent . mediaBufferLens
 
 instance (EachSample c c') => EachSample (Segment c) (Segment c') where
   type SamplesFrom (Segment c) = SamplesFrom c

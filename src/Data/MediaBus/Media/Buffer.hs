@@ -1,11 +1,11 @@
 -- | Media with a content stored in a 'Vector'
 module Data.MediaBus.Media.Buffer
   ( type CanBeSample,
-    HasMediaBuffer (..),
-    type HasMediaBuffer',
-    type HasMediaBufferL,
-    type HasMediaBufferL',
-    mediaBuffer',
+    HasMediaBufferLens (..),
+    type HasMediaBufferLens',
+    type HasMediaBufferLensL,
+    type HasMediaBufferLensL',
+    mediaBufferLens',
     MediaBuffer (..),
     mediaBufferVector,
     mediaBufferLength,
@@ -37,7 +37,7 @@ import Control.Monad.ST (ST, runST)
 import qualified Data.ByteString as B
 import Data.Default (Default (..))
 import Data.MediaBus.Media.Samples (CanBeSample)
-import Data.Typeable (Proxy (..), typeRep, Typeable)
+import Data.Typeable (Proxy (..), Typeable, typeRep)
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.ByteString as Spool
 import Foreign.Storable
@@ -47,33 +47,27 @@ import Test.QuickCheck
 
 -- ** Types using 'MediaBuffer'
 
--- TODO simplify, get rid of useless type classes!!!
+-- | Types providing a 'MediaBuffer' lens
+class (Storable (MediaBufferElemFrom s), Storable (MediaBufferElemTo s))
+  => HasMediaBufferLens s t where
+  type MediaBufferElemFrom s
+  type MediaBufferElemTo t
+  mediaBufferLens :: Lens s t (MediaBuffer (MediaBufferElemFrom s)) (MediaBuffer (MediaBufferElemTo t))
 
--- | Types containing a 'MediaBuffer'
-class HasMediaBuffer s t where
-  -- | The media buffer type contained in 's'
-  type MediaBufferFrom s
-
-  -- | The type that results from changing the media buffer type in 's' to 'b'
-  type MediaBufferTo t
-
-  -- | A lens for converting the media buffer
-  mediaBuffer :: Lens s t (MediaBufferFrom s) (MediaBufferTo t)
-
--- | Like 'HasMediaBuffer' but with @s ~ t@ and @MediaBufferFrom s ~ MediaBufferTo t@
-type HasMediaBuffer' s = (HasMediaBuffer s s, MediaBufferFrom s ~ MediaBufferTo s)
+-- | Like 'HasMediaBufferLens' but with @s ~ t@ and @MediaBufferElemFrom s ~ MediaBufferElemTo t@
+type HasMediaBufferLens' s = (HasMediaBufferLens s s, MediaBufferElemFrom s ~ MediaBufferElemTo s)
 
 -- | Like 'mediaBuffer' but with @s ~ t@ and @MediaBufferFrom s ~ MediaBufferTo t@
-mediaBuffer' ::
-  HasMediaBuffer' s =>
-  Lens' s (MediaBufferFrom s)
-mediaBuffer' = mediaBuffer
+mediaBufferLens' ::
+  HasMediaBufferLens' s =>
+  Lens' s (MediaBuffer (MediaBufferElemTo s))
+mediaBufferLens' = mediaBufferLens
 
 -- | Like 'HasMediaBuffer' but with the typical lens type parameters @s t a b@
-type HasMediaBufferL s t a b = (HasMediaBuffer s t, MediaBufferFrom s ~ a, MediaBufferTo t ~ b)
+type HasMediaBufferLensL s t a b = (HasMediaBufferLens s t, MediaBufferElemFrom s ~ a, MediaBufferElemTo t ~ b)
 
 -- | Like 'HasMediaBufferL' but with the typical **simple** lens type parameters @s a@
-type HasMediaBufferL' s a = (HasMediaBuffer s s, MediaBufferFrom s ~ a, MediaBufferTo s ~ a)
+type HasMediaBufferLensL' s a = (HasMediaBufferLens s s, MediaBufferElemFrom s ~ a, MediaBufferElemTo s ~ a)
 
 -- | A buffer for media data. This is just a newtype wrapper around 'V.Vector'.
 newtype MediaBuffer t = MkMediaBuffer

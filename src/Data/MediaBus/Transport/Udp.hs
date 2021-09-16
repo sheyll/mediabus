@@ -18,8 +18,8 @@ import Control.Lens
     (<<+=),
     (<<.=),
   )
-import Control.Monad.Logger (MonadLogger, logDebug, logInfo)
-import Control.Monad.State.Strict (unless, when)
+import Control.Monad.Logger (MonadLogger)
+import Control.Monad.State.Strict (when)
 import qualified Data.ByteString as B
 import Data.Conduit.Network.UDP
   ( HostPreference,
@@ -48,9 +48,9 @@ import Data.MediaBus.Media.Stream
     Stream,
   )
 import Data.Streaming.Network (bindPortUDP)
-import Data.String (IsString (fromString))
 import Network.Socket (SockAddr, close)
 import Text.Printf (printf)
+import Data.MediaBus.InternalLogging
 
 -- | A UDP source that uses 'MonandResource' to make sure the socket is closed.
 udpDatagramSource ::
@@ -61,12 +61,11 @@ udpDatagramSource ::
   ConduitT () (Stream (SourceId (Maybe SockAddr)) (SeqNum s) (ClockTimeDiff c) p B.ByteString) m ()
 udpDatagramSource _clk port host = do
   !t0 <- lift now
-  $logInfo (fromString (printf "starting UDP listener %s:%i" (show host) port))
+  dbg (printf "starting UDP listener %s:%i" (show host) port)
   bracketP (bindPortUDP port host) close (`sourceSocket` 1024)
     .| evalStateC (Nothing, 0, t0) (awaitForever createFrame)
-  $logInfo (fromString (printf "stopped UDP listener %s:%i" (show host) port))
+  dbg (printf "stopped UDP listener %s:%i" (show host) port)
   where
-    yieldMsg = fromString (printf "datagram received on %s:%i" (show host) port)
     createFrame m = do
       let currentSender = msgSender m
       lastSender <- _1 <<.= Just currentSender
@@ -74,7 +73,7 @@ udpDatagramSource _clk port host = do
       when (Just currentSender /= lastSender) $ do
         _2 .= 0
         _3 .= tNow
-        $logInfo (yieldMsg <> fromString (printf " sender changed: old was %s -> new is %s" (show lastSender) (show currentSender)))
+        dbg (printf "sender changed: old was %s -> new is %s" (show lastSender) (show currentSender))
         yieldStartFrameCtx
           ( MkFrameCtx
               (MkSourceId (Just currentSender))
@@ -84,5 +83,4 @@ udpDatagramSource _clk port host = do
           )
       sn <- _2 <<+= 1
       tStart <- use _3
-      unless (Just currentSender /= lastSender) ($logDebug yieldMsg)
       yieldNextFrame (MkFrame (diffTime tNow tStart) sn (msgData m))

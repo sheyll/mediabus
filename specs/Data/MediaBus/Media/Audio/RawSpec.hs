@@ -27,7 +27,7 @@ spec = do
 p1 :: forall c t. (Show (Pcm c t), CanBeSample (Pcm c t)) => Audio (Hz 48000) c (Raw t) -> Property
 p1 inAudio = do
   let len = mediaBufferLength inBuf
-      inBuf = inAudio ^. mediaBuffer
+      inBuf = inAudio ^. mediaBufferLens
   ioProperty $
     allocaArray @(Pcm c t) len $ \bufPtr -> do
       outList <- forM [0 .. len - 1] $ \i -> do

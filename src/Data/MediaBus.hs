@@ -5,6 +5,7 @@ module Data.MediaBus
   )
 where
 
+import Data.MediaBus.Logging as X
 import Data.MediaBus.Basics.Clock as X
 import Data.MediaBus.Basics.LoggingExtra as X
 import Data.MediaBus.Basics.Monotone as X

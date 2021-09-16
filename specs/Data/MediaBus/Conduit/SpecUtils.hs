@@ -97,7 +97,7 @@ mkTestInputs =
             ( MkFrame
                 ts
                 sn
-                (pcmMediaBuffer . mediaBufferVector # V.replicate len 0xD5)
+                (rawPcmAudioBuffer . mediaBufferVector # V.replicate len 0xD5)
             )
         )
     mkTestStartPacket = MkStream (Start (MkFrameCtx () 0 0 ()))

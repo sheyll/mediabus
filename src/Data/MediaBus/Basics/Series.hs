@@ -1,4 +1,5 @@
 -- | A series with a start value and consecutive next vaules.
+-- TODO REMOVE!!
 module Data.MediaBus.Basics.Series
   ( Series (..),
     _Next,

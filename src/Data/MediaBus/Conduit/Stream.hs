@@ -223,36 +223,40 @@ concatStreamContents =
 -- | Log a stream.
 logStreamC ::
   (Show (Stream i s t p c), Monad m, MonadLogger m) =>
+  LogSource ->
   (Stream i s t p c -> Maybe LogLevel) ->
   Text ->
   ConduitT (Stream i s t p c) (Stream i s t p c) m ()
-logStreamC f title =
+logStreamC src f title =
   mapMC
     ( \x -> do
-        mapM_ (`logOtherN` (title <> fromString (show x))) (f x)
+        mapM_ (\lvl -> logOtherNS src lvl (title <> fromString (show x))) (f x)
         return x
     )
 
 -- | Log a stream using 'LevelWarn'.
 logWarnStreamC ::
   (Show (Stream i s t p c), Monad m, MonadLogger m) =>
+  LogSource ->
   Text ->
   ConduitT (Stream i s t p c) (Stream i s t p c) m ()
-logWarnStreamC =
-  logStreamC (const (Just LevelWarn))
+logWarnStreamC src =
+  logStreamC src (const (Just LevelWarn))
 
 -- | Log a stream using 'LevelInfo'.
 logInfoStreamC ::
   (Show (Stream i s t p c), Monad m, MonadLogger m) =>
+  LogSource ->
   Text ->
   ConduitT (Stream i s t p c) (Stream i s t p c) m ()
-logInfoStreamC =
-  logStreamC (const (Just LevelInfo))
+logInfoStreamC src =
+  logStreamC src (const (Just LevelInfo))
 
 -- | Log a stream using 'LevelDebug'.
 logDebugStreamC ::
   (Show (Stream i s t p c), Monad m, MonadLogger m) =>
+  LogSource ->
   Text ->
   ConduitT (Stream i s t p c) (Stream i s t p c) m ()
-logDebugStreamC =
-  logStreamC (const (Just LevelDebug))
+logDebugStreamC src =
+  logStreamC src (const (Just LevelDebug))

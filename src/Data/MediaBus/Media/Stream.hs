@@ -53,6 +53,7 @@ import Data.MediaBus.Media.Channels (EachChannel (..))
 import Data.MediaBus.Media.Media (HasMedia (..))
 import GHC.Generics (Generic)
 import Test.QuickCheck (Arbitrary (arbitrary))
+import Data.MediaBus.Media.Buffer
 
 -- | Meta information about a media 'Stream'.
 data FrameCtx streamId sequenceNumber timestamp streamStartPayload = MkFrameCtx
@@ -99,6 +100,7 @@ instance HasSeqNum (FrameCtx i s t p) where
   type GetSeqNum (FrameCtx i s t p) = s
   type SetSeqNum (FrameCtx i s t p) x = FrameCtx i x t p
   seqNum = frameCtxSeqNumRef
+
 
 instance
   (Arbitrary i, Arbitrary s, Arbitrary t, Arbitrary p) =>
@@ -152,6 +154,11 @@ instance
 deriving instance Functor (Frame sequenceNumber timestamp)
 
 makeLenses ''Frame
+
+instance HasMediaBufferLens c c' => HasMediaBufferLens (Frame s t c) (Frame s t c') where
+  type MediaBufferElemFrom (Frame s t c) = MediaBufferElemFrom c
+  type MediaBufferElemTo (Frame s t c') = MediaBufferElemTo c'
+  mediaBufferLens = framePayload . mediaBufferLens
 
 -- | Class for types that have a 'Traversal' for '_framePayload'
 class EachFramePayload s t where

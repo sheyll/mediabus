@@ -30,7 +30,7 @@ spec = do
               runNoLoggingT
                 . runResourceT
                 . runConduit
-                $ (yieldMany inputs .| logStreamC (const Nothing) "test" .| consume)
+                $ (yieldMany inputs .| logStreamC "test-log-source" (const Nothing) "test" .| consume)
             return (inputs === outputs)
         it "passes through the values when logging is performced" $
           property $ \(inputs :: [Stream Bool Int Int Int Int]) -> ioProperty $ do
@@ -38,7 +38,7 @@ spec = do
               runNoLoggingT
                 . runResourceT
                 . runConduit
-                $ (yieldMany inputs .| logStreamC (const (Just LevelWarn)) "test" .| consume)
+                $ (yieldMany inputs .| logStreamC "test-log-source" (const (Just LevelWarn)) "test" .| consume)
             return (inputs === outputs)
       describe "assumeSynchronized" $
         it "removes sequence numbers and timestamps but passes all buffers untouched" $

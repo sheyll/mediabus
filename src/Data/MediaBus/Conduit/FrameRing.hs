@@ -77,6 +77,9 @@ import UnliftIO
     newIORef,
     withAsync,
   )
+import Text.Printf (printf)
+import Control.Monad.Logger
+import Data.MediaBus.InternalLogging
 
 data RingSourceState s t = MkRingSourceState
   { _lastWakeupTime :: !UTCTime,
@@ -93,13 +96,15 @@ withConcurrentSource ::
   forall i p c m o.
   ( MonadResource m,
     MonadUnliftIO m,
+    MonadLogger m,
     Default p,
     HasStaticDuration c,
     HasDuration c,
     NFData c,
     NFData p,
     NFData i,
-    Random i
+    Random i,
+    Show i
   ) =>
   Natural ->
   ConduitT () (SyncStream i p c) m () ->
@@ -124,13 +129,14 @@ withConcurrentSource !frameQueueLen !src !f = do
 --
 -- Refer to 'frameRingSink' to learn howto put data into the ring
 -- and 'frameRingSource' on how to retreive data.
-newtype FrameRing i p c = MkFrameRing
-  { _frameRingArray :: V.Vector (IORef (Maybe (SyncStream i p c)))
+data FrameRing i p c = MkFrameRing
+  { _frameRingArray :: !(V.Vector (IORef (Maybe (SyncStream i p c))))
+  , _frameRingId :: !String
   }
 
 -- | Create a new 'FrameRing' with an upper bound on the queue length.
 mkFrameRing ::
-  (MonadIO m, Random i, Default p) =>
+  (MonadIO m, Random i, Show i, Default p) =>
   Natural ->
   m (FrameRing i p c)
 mkFrameRing qlen' =
@@ -145,7 +151,7 @@ mkFrameRing qlen' =
     !ssrc <- randomIO
     atomicWriteIORef (ring V.! 0) (Just (MkStream (Start (MkFrameCtx ssrc def def def))))
 
-    return (MkFrameRing ring)
+    return (MkFrameRing ring (show ssrc))
 
 -- | Consume a 'SyncStream' and put each value into a 'FrameRing'.
 -- When the ring is full, **drop the oldest** element that is not a
@@ -153,49 +159,52 @@ mkFrameRing qlen' =
 -- If the queue length is 1 then the new value will not be written
 -- as long a the 'Start' value is not retreived.
 frameRingSink ::
-  (NFData c, NFData i, NFData p, MonadIO m) =>
+  (NFData c, NFData i, NFData p, MonadIO m, MonadLogger m) =>
   FrameRing i p c ->
   ConduitT (SyncStream i p c) Void m ()
-frameRingSink (MkFrameRing !ringRef) = do
+frameRingSink (MkFrameRing !ringRef !ringId) = do
   writeIndexRef <- newIORef 1
   awaitForever (pushInRing writeIndexRef)
   where
     ringSize = V.length ringRef
 
     pushInRing !writeIndexRef !newest' = do
-      -- read and update the next write position
-      !writePos <- atomicModifyIORef' writeIndexRef (\i -> ((i + 1) `mod` ringSize, i))
-      -- Debug.traceM (printf "writing to: %i\n" writePos)
-
+      -- read then increment the write position
+      !currentWritePos <- atomicModifyIORef' writeIndexRef (\i -> ((i + 1) `mod` ringSize, i))
+      dbg (printf "ringbuffer %s: writing to: %i" ringId currentWritePos)
       -- strictly evaluate the incoming element
       newest <- evaluate $ withStrategy rdeepseq newest'
 
-      -- replace the ring buffer element at writePos
-      void $
+      -- replace the ring buffer element at currentWritePos
+      !infoMsg <-
         atomicModifyIORef
-          (ringRef V.! writePos)
-          (\mOldest -> (Just (replaceRingElem mOldest newest), ()))
+          (ringRef V.! currentWritePos)
+          (\mOldest ->
+              let (!newElem, !infoMsg) = replaceRingElem mOldest newest
+                  infoMsg :: Maybe String
+              in (Just newElem, infoMsg))
+      mapM_ (out . printf "ringbuffer %s: %s" ringId) infoMsg
 
     replaceRingElem !mOldest !newest =
       case mOldest of
         Nothing ->
-          newest -- if the ring buffer element was read,
+          (newest, Nothing) -- if the ring buffer element was read,
           -- write the newest frame
         Just oldest ->
           case newest of
             MkStream (Start _) ->
               -- start frames are always written
-              newest
+              (newest, Nothing)
             _ ->
               -- the oldest element wasn't read yet
               case oldest of
                 MkStream (Next _) ->
                   -- replace with newest
-                  newest
+                  (newest, Just "overflow: replaced oldest frame")
                 MkStream (Start _) ->
                   -- an old, unread start value is more important
                   -- than a new payload frame
-                  oldest
+                  (oldest, Just "overflow: dropping new frame for oldest start frame")
 
 -- | Periodically poll a 'FrameRing' and yield the 'Frame's
 -- put into the ring, or 'Missing' otherwise.
@@ -204,11 +213,11 @@ frameRingSink (MkFrameRing !ringRef) = do
 -- without sequence number and timestamps.
 frameRingSource ::
   forall i p c m.
-  (MonadIO m, HasDuration c, Random i, Default p) =>
+  (MonadIO m, HasDuration c, Random i, Default p, MonadLogger m, Show i) =>
   FrameRing i p c ->
   NominalDiffTime ->
   ConduitT () (SyncStream i p (Discontinous c)) m ()
-frameRingSource (MkFrameRing !ringRef) !defaultPacketDuration = do
+frameRingSource (MkFrameRing !ringRef !ringId) !defaultPacketDuration = do
   !tStart <- liftIO getCurrentTime
   go tStart (MkRingSourceState tStart 0 0)
   where
@@ -231,6 +240,8 @@ frameRingSource (MkFrameRing !ringRef) !defaultPacketDuration = do
           let st'' =
                 st' & nextYieldTime +~ currentPacketDuration
                   & readPos .~ nextReadPos
+          dbg (printf "ringbuffer %s: read from: %d, next read pos: %d next wakeup: %s"
+                ringId (st ^. readPos) (st'' ^. readPos) (show (st'' ^. nextYieldTime)))
           go tStart st''
 
     nextFrame rp = do
@@ -240,16 +251,17 @@ frameRingSource (MkFrameRing !ringRef) !defaultPacketDuration = do
           let nextPos = (rp + 1) `mod` ringSize
            in case buf of
                 Next (MkFrame _ _ x) -> do
-                  -- Debug.traceM (printf "read payload from: %i\n" rp)
                   yieldNextFrame (MkFrame def def (Got x))
                   return (nextPos, getDuration x)
                 Start (MkFrameCtx ssrc _ _ p) -> do
                   -- Start frame
-                  -- Debug.traceM (printf "read start from: %i\n" rp)
+                  dbg (printf "ringbuffer %s: yiedling start from with id: %s"
+                        ringId (show ssrc))
                   yieldStartFrameCtx (MkFrameCtx ssrc def def p)
                   return (nextPos, 0)
         Nothing -> do
-          -- Debug.traceM (printf "read nothing from: %i\n" rp)
+          out (printf "ringbuffer %s: underflow! reading position: %i" ringId rp)
+
           yieldNextFrame (MkFrame def def Missing)
           return (rp, missingDuration)
 

@@ -4,13 +4,14 @@
 module Data.MediaBus.Media.Audio.Raw
   ( Raw,
     Pcm,
-    pcmMediaBuffer,
+    rawPcmAudioBuffer,
     IsPcmValue (..),
   )
 where
 
 import Control.DeepSeq (NFData (..))
 import Control.Lens (Each (each), Iso, iso, (#), (^.))
+import Data.Kind (Type)
 import Data.MediaBus.Basics.Ticks
   ( HasDuration (getDuration),
     KnownRate (rateVal),
@@ -24,7 +25,7 @@ import Data.MediaBus.Media.Blank
   )
 import Data.MediaBus.Media.Buffer
   ( CanBeSample,
-    HasMediaBuffer (..),
+    HasMediaBufferLens (..),
     MediaBuffer (MkMediaBuffer),
     createMediaBuffer,
     mediaBufferLength,
@@ -47,7 +48,7 @@ import Foreign (Storable)
 import Test.QuickCheck (Arbitrary (arbitrary))
 
 -- | An indicator for uncompressed audio with a given per sample encoding type.
-data Raw encoding
+data Raw (encoding :: Type)
 
 -- | A family of multi-channel audio sample value types. Values of this type are
 --   stored in 'MediaBuffer's.
@@ -70,8 +71,8 @@ instance (Storable (Pcm c t), Arbitrary (Pcm c t)) => Arbitrary (Audio r c (Raw 
   arbitrary = MkPcm <$> arbitrary
 
 -- | An isomorphism for 'Audio' and 'MediaBuffer'
-pcmMediaBuffer :: Iso (Audio r c (Raw t)) (Audio r' c' (Raw t')) (MediaBuffer (Pcm c t)) (MediaBuffer (Pcm c' t'))
-pcmMediaBuffer = iso _pcmMediaBuffer MkPcm
+rawPcmAudioBuffer :: Iso (Audio r c (Raw t)) (Audio r' c' (Raw t')) (MediaBuffer (Pcm c t)) (MediaBuffer (Pcm c' t'))
+rawPcmAudioBuffer = iso _pcmMediaBuffer MkPcm
 
 instance
   (KnownRate r, CanBeSample (Pcm c t), CanBeBlank (Pcm c t)) =>
@@ -134,11 +135,11 @@ instance
 
 instance
   (CanBeSample (Pcm ca a), CanBeSample (Pcm cb b)) =>
-  HasMediaBuffer (Audio r ca (Raw a)) (Audio r' cb (Raw b))
+  HasMediaBufferLens (Audio r ca (Raw a)) (Audio r' cb (Raw b))
   where
-  type MediaBufferFrom (Audio r ca (Raw a)) = (MediaBuffer (Pcm ca a))
-  type MediaBufferTo (Audio r' cb (Raw b)) = (MediaBuffer (Pcm cb b))
-  mediaBuffer = pcmMediaBuffer
+  type MediaBufferElemFrom (Audio r ca (Raw a)) = Pcm ca a
+  type MediaBufferElemTo (Audio r' cb (Raw b)) = Pcm cb b
+  mediaBufferLens = rawPcmAudioBuffer
 
 instance
   (CanBeSample (Pcm c t), CanBeSample (Pcm c' t')) =>
@@ -146,7 +147,7 @@ instance
   where
   type SamplesFrom (Audio r c (Raw t)) = (Pcm c t)
   type SamplesTo (Audio r' c' (Raw t')) = (Pcm c' t')
-  eachSample = pcmMediaBuffer . each
+  eachSample = rawPcmAudioBuffer . each
 
 instance
   ( CanBeSample (Pcm c t),
@@ -168,8 +169,8 @@ instance
     | getDuration buf >= tPacket =
       let (!nextPacket, !rest) = V.splitAt n bufV
        in Just
-            ( pcmMediaBuffer . mediaBufferVector # V.force nextPacket,
-              pcmMediaBuffer . mediaBufferVector # rest
+            ( rawPcmAudioBuffer . mediaBufferVector # V.force nextPacket,
+              rawPcmAudioBuffer . mediaBufferVector # rest
             )
     | otherwise = Nothing
     where
@@ -177,7 +178,7 @@ instance
       !tSample = getPeriodDuration (Proxy :: Proxy (Audio r c (Raw t)))
 
 instance CanBeSample (Pcm c t) => Semigroup (Audio r c (Raw t)) where
-  x <> y = pcmMediaBuffer # mappend (x ^. pcmMediaBuffer) (y ^. pcmMediaBuffer)
+  x <> y = rawPcmAudioBuffer # mappend (x ^. rawPcmAudioBuffer) (y ^. rawPcmAudioBuffer)
 
 instance CanBeSample (Pcm c t) => Monoid (Audio r c (Raw t)) where
-  mempty = pcmMediaBuffer # mempty
+  mempty = rawPcmAudioBuffer # mempty

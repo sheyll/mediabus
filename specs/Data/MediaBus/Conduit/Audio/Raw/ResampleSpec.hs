@@ -19,7 +19,7 @@ spec =
        in property $ \(NonEmpty samples) ->
             mediaBufferToList
               ( view
-                  pcmMediaBuffer
+                  mediaBufferLens
                   (resampleAndConsume (singleFrameFromList samples) lastVal)
               )
               `shouldBe` expectedResamplingResult samples lastVal
@@ -28,7 +28,7 @@ spec =
        in property $ \samplesLists ->
             mediaBufferToList
               ( view
-                  pcmMediaBuffer
+                  mediaBufferLens
                   (resampleAndConsume (framesFromLists samplesLists) lastVal)
               )
               `shouldBe` expectedResamplingResult (join samplesLists) lastVal
@@ -53,7 +53,7 @@ singleFrameFromList ::
 singleFrameFromList x =
   mapOutput
     (MkStream . Next)
-    ( mapOutput (MkFrame () def) (yield (pcmMediaBuffer # mediaBufferFromList x))
+    ( mapOutput (MkFrame () def) (yield (rawPcmAudioBuffer # mediaBufferFromList x))
         .| setTimestampFromDurationsC 0
     )
 
@@ -64,6 +64,6 @@ framesFromLists ::
 framesFromLists xs =
   mapOutput
     (MkStream . Next)
-    ( mapOutput (MkFrame () def) (mapM_ (yield . view (from pcmMediaBuffer) . mediaBufferFromList) xs)
+    ( mapOutput (MkFrame () def) (mapM_ (yield . view (from rawPcmAudioBuffer) . mediaBufferFromList) xs)
         .| setTimestampFromDurationsC 0
     )

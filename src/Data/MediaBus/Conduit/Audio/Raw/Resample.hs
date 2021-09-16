@@ -22,8 +22,8 @@ import Data.MediaBus.Basics.Ticks (HasRate (..), Hz)
 import Data.MediaBus.Conduit.Stream (mapFrameContentMC')
 import Data.MediaBus.Media.Audio.Raw (IsPcmValue (..), Pcm)
 import Data.MediaBus.Media.Buffer
-  ( HasMediaBuffer (mediaBuffer),
-    HasMediaBufferL,
+  ( HasMediaBufferLens (mediaBufferLens),
+    HasMediaBufferLensL,
     MediaBuffer,
     createMediaBuffer,
     mediaBufferVector,
@@ -54,18 +54,18 @@ resample8to16kHz' ::
     GetRate cOut ~ Hz 16000,
     EachSampleL cIn cOut (Pcm ch sa) (Pcm ch sa),
     IsPcmValue (Pcm ch sa),
-    HasMediaBufferL
+    HasMediaBufferLensL
       cIn
       cOut
-      (MediaBuffer (SamplesFrom cIn))
-      (MediaBuffer (SamplesTo cOut))
+      (SamplesFrom cIn)
+      (SamplesTo cOut)
   ) =>
   Pcm ch sa ->
   ConduitT (Stream i s t p cIn) (Stream i s t p cOut) m ()
 resample8to16kHz' !sa =
   evalStateC
     sa
-    (mapFrameContentMC' (mapMOf mediaBuffer resample))
+    (mapFrameContentMC' (mapMOf mediaBufferLens resample))
   where
     resample ::
       MediaBuffer (Pcm ch sa) -> StateT (Pcm ch sa) m (MediaBuffer (Pcm ch sa))

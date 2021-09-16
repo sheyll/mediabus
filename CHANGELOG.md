@@ -2,7 +2,12 @@
 
 ## 0.9.1
 
+* Replace the type class `HasMediaBuffer` with a new class `HasMediaBufferLens`
+  that directly points to a `MediaBuffer`
+* Add debug sinks to dump a stream to a file
 * Add `forall` expressions for easier type applications
+* Add a `LogSource` to all mediabus logging, and offer a predicate for
+  users of the library that allows to filter
 
 ## 0.9.0
 
@@ -51,7 +56,7 @@
 * Add setTimestampFromDurations, setTimestampFromDurationsC
 * Merge Data.MediaBus.Conduit.Timing into Data.MediaBus.Conduit.SyncStream
 * Rename setSequenceNumbersAndTimestamps to setSequenceNumberAndTimestamp
-* Rename convertTicksC` to convertTimestampC`
+* Rename `convertTicksC` to `convertTimestampC`
 * Rename mapTicksC to mapTimestampC
 * Rename deriveFrameTimestamp to setTimestampFromDurationsC
 * Improve SyncStream documentation

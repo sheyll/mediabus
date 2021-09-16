@@ -216,7 +216,7 @@ frameContentQSource (MkFrameContentQ pTime pollIntervall ringRef) =
     yieldMissing !dt !wasMissing = do
       unless
         wasMissing
-        ($logDebug (fromString (printf "underflow: %s" (show dt)))) -- TODO add newtype FrameFromFrameRing x, with an UnderflowAt clause and return that instead of logging
+        ($logDebug (fromString (printf "underflow: %s" (show dt))))
       replicateM_ (floor (dt / pTime)) (yieldNextBuffer Missing)
     yieldStart =
       ( MkFrameCtx

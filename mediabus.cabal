@@ -15,6 +15,7 @@ build-type:          Simple
 
 library
   hs-source-dirs:      src
+  other-modules:       Data.MediaBus.InternalLogging
   exposed-modules:
                        Data.MediaBus
                      , Data.MediaBus.Basics.Clock
@@ -40,6 +41,7 @@ library
                      , Data.MediaBus.Conduit.SyncStream
                      , Data.MediaBus.Conduit.Trace
                      , Data.MediaBus.Conduit.TypeAnnotations
+                     , Data.MediaBus.Logging
                      , Data.MediaBus.Media.Audio
                      , Data.MediaBus.Media.Audio.Raw
                      , Data.MediaBus.Media.Audio.Raw.Alaw

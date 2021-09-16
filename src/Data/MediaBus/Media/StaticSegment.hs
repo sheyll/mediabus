@@ -24,6 +24,7 @@ import Data.MediaBus.Media.Media (HasMedia (..))
 import Data.MediaBus.Media.Samples (EachSample (..))
 import Test.QuickCheck (Arbitrary)
 import Text.Printf (printf)
+import Data.MediaBus.Media.Buffer
 
 -- | A segment is some content with a fixed (type level) duration.
 -- The payload however, has a duration of less than the static duration.
@@ -35,6 +36,14 @@ newtype StaticSegment (duration :: StaticTicks) c = MkStaticSegment {_staticSegm
 -- | An 'Iso' for the 'StaticSegment' newtype.
 staticSegmentContent :: Iso (StaticSegment d c) (StaticSegment d c') c c'
 staticSegmentContent = iso _staticSegmentContent MkStaticSegment
+
+instance
+  HasMediaBufferLens c c' =>
+  HasMediaBufferLens (StaticSegment d c) (StaticSegment d c')
+  where
+   type MediaBufferElemFrom (StaticSegment d c) = MediaBufferElemFrom c
+   type MediaBufferElemTo (StaticSegment d c') = MediaBufferElemTo c'
+   mediaBufferLens = staticSegmentContent . mediaBufferLens
 
 instance (HasMedia c c') => HasMedia (StaticSegment d c) (StaticSegment d c') where
   type MediaFrom (StaticSegment d c) = MediaFrom c
