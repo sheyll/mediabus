@@ -1,13 +1,17 @@
 # Changes
 
-## 0.9.1
+## 1.0.0
 
+* Rename `pcmMediaBuffer` to `mediaBufferLens`
 * Replace the type class `HasMediaBuffer` with a new class `HasMediaBufferLens`
   that directly points to a `MediaBuffer`
 * Add debug sinks to dump a stream to a file
-* Add `forall` expressions for easier type applications
 * Add a `LogSource` to all mediabus logging, and offer a predicate for
   users of the library that allows to filter
+
+## 0.9.1
+
+* Add `forall` expressions for easier type applications
 
 ## 0.9.0
 
