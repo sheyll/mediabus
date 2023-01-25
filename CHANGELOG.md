@@ -1,5 +1,10 @@
 # Changes
 
+## 1.0.1
+
+ * Add flake.nix
+ * Loosen restrictions on the `base` dependency
+
 ## 1.0.0
 
 * Rename `pcmMediaBuffer` to `mediaBufferLens`

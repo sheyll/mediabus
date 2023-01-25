@@ -98,8 +98,7 @@ reorderFramesByC !frameRank !getNextRank !maxQueueLen =
                   flushQueue
                   -- yield a new Start frame
                   ctx <- use lastFrameCtx
-                  let start =
-                        MkStream (Start ctx) & frameRank .~ (frm ^. frameRank)
+                  let start = MkStream (Start ctx) & frameRank .~ (frm ^. frameRank)
                       MkStream (Start ctx') = start
                   lastFrameCtx .= ctx'
                   yield start

@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                mediabus
-version:             1.0.0
+version:             1.0.1
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/sheyll/mediabus
@@ -8,7 +8,7 @@ license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Sven Heyll
 maintainer:          sven.heyll@gmail.com
-copyright:           2016-2021 Sven Heyll
+copyright:           2016-2023 Sven Heyll
 category:            Media
 build-type:          Simple
 -- extra-source-files:
@@ -103,7 +103,7 @@ library
   build-depends:       QuickCheck
                      , array
                      , async
-                     , base ^>= 4.14
+                     , base >= 4.14 && < 5
                      , bytestring
                      , bytestring-to-vector ^>= 0.3
                      , cereal
@@ -158,7 +158,7 @@ test-suite tests
   build-depends:       QuickCheck
                      , array
                      , async
-                     , base ^>= 4.14
+                     , base >= 4.14 && < 5
                      , binary
                      , bytestring
                      , bytestring-to-vector ^>= 0.3
@@ -237,4 +237,4 @@ test-suite tests
 
 source-repository head
   type:     git
-  location: https://github.com/lindenbaum/mediabus
+  location: https://github.com/sheyll/mediabus
