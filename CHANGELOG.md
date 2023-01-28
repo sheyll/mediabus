@@ -1,5 +1,13 @@
 # Changes
 
+## 2.0.0
+
+ * Make more robust against memory leaks:
+   * Use `StrictData` in the library
+   * Add `-fno-full-laziness`
+   * The resampler now uses an `IORef` for the last value required to interpolate the first value of the next block.
+     It also does not rely on the `StateT` monad anymore, and it is more stable in case a `ConduitT` gets discontinued.
+
 ## 1.0.1
 
  * Add flake.nix

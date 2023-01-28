@@ -10,6 +10,10 @@ import Test.QuickCheck
 
 spec :: Spec
 spec = do
+  describe "Raw Sample Conversion" $ do
+    it "pcmMonoS16ConversionApiIsNice" $ property pcmMonoS16ConversionApiIsNice
+    it "pcmMonoS16AudioConversionApiIsNice" $ property pcmMonoS16AudioConversionApiIsNice
+
   describe "Storable" $ do
     describe "storing a buffer won't change the buffer" $ do
       it "Audio (Hz 48000) Mono (Raw S16)" $ property (p1 @Mono @S16)
@@ -23,6 +27,18 @@ spec = do
       it "Audio (Hz 48000) Stereo (Raw S16)" $ property (p2 (Proxy @Stereo) (Proxy @S16))
       it "Audio (Hz 48000) Mono (Raw ALaw)" $ property (p2 (Proxy @Mono) (Proxy @ALaw))
       it "Audio (Hz 48000) Stereo (Raw ALaw)" $ property (p2 (Proxy @Stereo) (Proxy @ALaw))
+
+
+pcmMonoS16ConversionApiIsNice :: Pcm Mono S16 -> Bool
+pcmMonoS16ConversionApiIsNice x =
+  -- try to map over the sample
+  over eachChannel' id x == x
+
+pcmMonoS16AudioConversionApiIsNice :: Audio (Hz 16000) Mono (Raw S16) -> Bool
+pcmMonoS16AudioConversionApiIsNice x =
+  -- try to map over the sample
+  over eachSample' id x == x
+
 
 p1 :: forall c t. (Show (Pcm c t), CanBeSample (Pcm c t)) => Audio (Hz 48000) c (Raw t) -> Property
 p1 inAudio = do

@@ -10,26 +10,29 @@ import Data.Default
 import Data.MediaBus
 import Test.Hspec
 import Test.QuickCheck
+import Data.IORef
 
 spec :: Spec
 spec =
   describe "Resampling of S16 samples from 8 to 16 kHz" $ do
     it "interpolates between samples" $
       let lastVal = 0
-       in property $ \(NonEmpty samples) ->
-            mediaBufferToList
-              ( view
-                  mediaBufferLens
-                  (resampleAndConsume (singleFrameFromList samples) lastVal)
-              )
-              `shouldBe` expectedResamplingResult samples lastVal
+       in property $
+            \(NonEmpty samples) -> do
+              out <- resampleAndConsume (singleFrameFromList samples) lastVal
+              mediaBufferToList
+                ( view
+                    mediaBufferLens
+                    out
+                  )  `shouldBe` expectedResamplingResult samples lastVal
     it "interpolates also between frames" $
       let lastVal = 0
-       in property $ \samplesLists ->
+       in property $ \samplesLists -> do
+            out <- resampleAndConsume (framesFromLists samplesLists) lastVal
             mediaBufferToList
               ( view
                   mediaBufferLens
-                  (resampleAndConsume (framesFromLists samplesLists) lastVal)
+                  out
               )
               `shouldBe` expectedResamplingResult (join samplesLists) lastVal
 
@@ -40,11 +43,12 @@ expectedResamplingResult xs lastVal =
 type AudioBuffer r = Audio (Hz r) Mono (Raw S16)
 
 resampleAndConsume ::
-  ConduitT () (Stream SrcId32 SeqNum32 Ticks32At48000 () (AudioBuffer 8000)) Identity () ->
+  ConduitT () (Stream SrcId32 SeqNum32 Ticks32At48000 () (AudioBuffer 8000)) IO () ->
   Pcm Mono S16 ->
-  AudioBuffer 16000
-resampleAndConsume vvv lastVal =
-  runConduitPure (vvv .| resample8to16kHz' lastVal .| concatStreamContents)
+  IO (AudioBuffer 16000)
+resampleAndConsume vvv lastVal = do
+  lvr <- newIORef lastVal
+  runConduit (vvv .| resample8to16kHz' lvr .| concatStreamContents)
 
 singleFrameFromList ::
   Monad m =>

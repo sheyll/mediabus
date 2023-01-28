@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                mediabus
-version:             1.0.1
+version:             2.0.0
 synopsis:            Multimedia streaming on top of Conduit
 description:         Please see README.md
 homepage:            https://github.com/sheyll/mediabus
@@ -60,7 +60,7 @@ library
                      , Data.MediaBus.Media.SyncStream
                      , Data.MediaBus.Transport.Udp
   default-language:    Haskell2010
-  ghc-options:       -Wall -funbox-strict-fields -fno-warn-unused-do-bind  -fprint-explicit-kinds
+  ghc-options:       -Wall -funbox-strict-fields -fno-warn-unused-do-bind  -fprint-explicit-kinds -fno-full-laziness
   default-extensions:  ApplicativeDo
                      , BangPatterns
                      , ConstraintKinds
@@ -92,6 +92,7 @@ library
                      , RankNTypes
                      , ScopedTypeVariables
                      , StandaloneDeriving
+                     , StrictData
                      , TemplateHaskell
                      , TupleSections
                      , TypeApplications
@@ -216,6 +217,7 @@ test-suite tests
                      , RankNTypes
                      , ScopedTypeVariables
                      , StandaloneDeriving
+                     , StrictData
                      , TemplateHaskell
                      , TupleSections
                      , TypeApplications
@@ -234,6 +236,7 @@ test-suite tests
                      -fno-warn-unused-do-bind
                      -fno-warn-missing-signatures
                      -fno-warn-type-defaults
+                     -fno-full-laziness
 
 source-repository head
   type:     git

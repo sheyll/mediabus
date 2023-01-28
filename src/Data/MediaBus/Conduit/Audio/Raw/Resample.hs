@@ -4,15 +4,9 @@ module Data.MediaBus.Conduit.Audio.Raw.Resample
   )
 where
 
-import Conduit (ConduitT, evalStateC)
+import Conduit (ConduitT, MonadIO, liftIO)
 import Control.Lens (mapMOf, (^.))
 import Control.Monad.ST (ST)
-import Control.Monad.State.Strict
-  ( MonadState (get, put),
-    StateT,
-    void,
-    when,
-  )
 import Control.Parallel.Strategies
   ( NFData,
     rdeepseq,
@@ -35,12 +29,15 @@ import Data.MediaBus.Media.Samples
 import Data.MediaBus.Media.Stream (Stream)
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.Mutable as M
+import Data.IORef
+import Control.Monad (void, when)
 
 -- | Resample 'RawAudio' 'IsMedia' from an 8kHz sample rate to 16 kHz, using a
 --   simple (and fast) linear interpolation between each sample.
 resample8to16kHz' ::
   forall m i s t p cIn cOut ch sa.
   ( Monad m,
+    MonadIO m,
     NFData i,
     NFData s,
     NFData t,
@@ -60,25 +57,21 @@ resample8to16kHz' ::
       (SamplesFrom cIn)
       (SamplesTo cOut)
   ) =>
-  Pcm ch sa ->
+  IORef (Pcm ch sa) ->
   ConduitT (Stream i s t p cIn) (Stream i s t p cOut) m ()
-resample8to16kHz' !sa =
-  evalStateC
-    sa
-    (mapFrameContentMC' (mapMOf mediaBufferLens resample))
+resample8to16kHz' saRef = do
+    mapFrameContentMC' (mapMOf mediaBufferLens resample)
   where
     resample ::
-      MediaBuffer (Pcm ch sa) -> StateT (Pcm ch sa) m (MediaBuffer (Pcm ch sa))
+      MediaBuffer (Pcm ch sa) -> m (MediaBuffer (Pcm ch sa))
     resample !sb = do
-      !lastVal <- get
+      !lastVal <- liftIO $ readIORef saRef
       let !lastVal' =
             if V.length (sb ^. mediaBufferVector) > 0
               then V.last (sb ^. mediaBufferVector)
               else lastVal
-      put lastVal'
-      let !sb' =
-            createMediaBuffer (interpolate lastVal (sb ^. mediaBufferVector))
-      return sb'
+      liftIO $ writeIORef saRef lastVal'
+      return (createMediaBuffer (interpolate lastVal (sb ^. mediaBufferVector)))
       where
         interpolate ::
           Pcm ch sa ->
