@@ -65,12 +65,10 @@ resample8to16kHz' saRef = do
     resample ::
       MediaBuffer (Pcm ch sa) -> m (MediaBuffer (Pcm ch sa))
     resample !sb = do
-      !lastVal <- liftIO $ readIORef saRef
-      let !lastVal' =
-            if V.length (sb ^. mediaBufferVector) > 0
-              then V.last (sb ^. mediaBufferVector)
-              else lastVal
-      liftIO $ writeIORef saRef lastVal'
+      !lastVal <- liftIO $ atomicModifyIORef' saRef $ \ !lastVal ->
+        if V.length (sb ^. mediaBufferVector) > 0
+          then (V.last (sb ^. mediaBufferVector), lastVal)
+          else (lastVal, lastVal)
       return (createMediaBuffer (interpolate lastVal (sb ^. mediaBufferVector)))
       where
         interpolate ::

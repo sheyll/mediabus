@@ -1,5 +1,9 @@
 # Changes
 
+## 2.0.1
+
+ * Use `atomicModifyIORef'`
+
 ## 2.0.0
 
  * Make more robust against memory leaks:
